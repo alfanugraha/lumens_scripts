@@ -1,1 +1,1 @@
-arga pu
+arga pull
