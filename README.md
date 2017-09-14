@@ -1,2 +1,2 @@
-# lumens_scripts
+# LUMENS R Scripts
 Repository for LUMENS R scripts
