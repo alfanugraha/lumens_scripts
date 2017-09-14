@@ -13,4 +13,6 @@ wdlc<-"C:/LUprof/landcover"
 wdt<-"C:/LUprof/tabular"
 dir.create("C:/LUprof/sProfa_result")
 setwd("C:/LUprof/sProfa_result")
-prodraster<-"YES" #AE this is user option to produce result in tiff format
+prodraster<-"YES" 
+write.csv("C:/GitHub")
+
