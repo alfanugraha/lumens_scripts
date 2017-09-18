@@ -46,3 +46,5 @@ dbDisconnect(DB)
 statuscode<-1
 statusmessage<-"Lookup table has been added"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+
+
