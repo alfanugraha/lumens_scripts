@@ -34,9 +34,9 @@ dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FA
 dbWriteTable(DB, InLUT_i, eval(parse(text=(paste(InLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
 
 #write to csv # rudimentary, removed
-# list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
-# csv_file<-paste(dirname(proj.file),"/csv_lookup_table.csv", sep="")
-# write.table(list_of_data_lut, csv_file, quote=FALSE, row.names=FALSE, sep=",")
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
+csv_file<-paste(LUMENS_path_user,"/csv_lookup_table.csv", sep="")
+write.table(list_of_data_lut, csv_file, quote=FALSE, row.names=FALSE, sep=",")
 
 resave(idx_lut, file=proj.file)
 

@@ -92,9 +92,9 @@ if(type==0){
   # pgWriteRast(DB, c("public", InHistLanduse_i), raster=eval(parse(text=(paste(InHistLanduse_i, sep="" )))))
   
   #write to csv # rudimentary, removed
-  # list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
-  # csv_file<-paste(dirname(proj.file),"/csv_", category, ".csv", sep="")
-  # write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
+  list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
+  csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
+  write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")
   
   addRasterToPG(project, data, InHistLanduse_i, srid)
   

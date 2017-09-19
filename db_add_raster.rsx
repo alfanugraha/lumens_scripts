@@ -79,7 +79,7 @@ if(type==0){
   
   #write to csv
   list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
-  csv_file<-paste(dirname(proj.file),"/csv_", category, ".csv", sep="")
+  csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")
   
   addRasterToPG(project, data, InHistLanduse_i, srid)
