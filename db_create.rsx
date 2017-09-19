@@ -52,7 +52,7 @@ if(!file.exists(postgre_path)){
 user_appdata<-Sys.getenv("APPDATA")
 pgconf_file<-paste0(user_appdata, "\\postgresql\\pgpass.conf")
 if(file.exists(pgconf_file)){
-  pgconf_line<-readLines(pgconf_file)[3]
+  pgconf_line<-readLines(pgconf_file)[length(pgconf_line)]
   pgconf_list<-unlist(str_split(pgconf_line, ':'))
   pgconf<-data.frame(rbind(pgconf_list))
   colnames(pgconf)<-c("host", "port", "auth", "user", "pass")
