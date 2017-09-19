@@ -1,2 +1,2 @@
-# LUMENS R Scripts # edit example
+# LUMENS R Scripts 
 Repository for LUMENS R scripts

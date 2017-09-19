@@ -107,6 +107,10 @@ if(user_temp_folder=="") {
 LUMENS_path_user <- paste(user_temp_folder,"/LUMENS", sep="") 
 dir.create(LUMENS_path_user, mode="0777")
 
+# clear temp first
+setwd(LUMENS_path_user)
+unlink(list.files(pattern="*"))
+
 #=Set reference data
 # save as temporary data 
 setwd(project_path)
@@ -115,7 +119,7 @@ writeOGR(admin_attribute, dsn=project_path, "ref", overwrite_layer=TRUE, driver=
 shp_dir<-paste(project_path,"/", "ref.shp", sep="")
 file_out<-paste(project_path, "/", "ref.tif", sep="")
 res<-spat_res
-gdalraster<-(paste0(LUMENS_path, "\\bin\\gdal_rasterize.exe"))
+gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
 osgeo_comm<-paste(gdalraster, shp_dir, file_out,"-a IDADM -tr", res, res, "-a_nodata 255 -ot Byte", sep=" ")
 system(osgeo_comm)
 
@@ -142,7 +146,7 @@ lut_ref<-read.table(dissolve_table, header=TRUE, sep=",")
 colnames(lut_ref)[2]="ADMIN_UNIT"
 
 # set batch parameter 
-pgEnvBatch <- paste(project_path, "/pg_env.bat", sep="")
+pgEnvBatch <- paste(LUMENS_path_user, "/pg_env.bat", sep="")
 pathEnv = ""
 pathEnv[1] = paste0("@SET PATH=", postgre_path, "\\bin;%PATH%")
 pathEnv[2] = paste0("@SET PGDATA=", postgre_path, "\\data")
@@ -227,7 +231,7 @@ idx_SCIENDO_lucm=0
 idx_TA_opcost=0
 idx_TA_regeco=0
 # getting an information of windows architecture through the path of LUMENS installation 
-gdaltranslate<-(paste0(LUMENS_path, "\\bin\\gdal_translate.exe"))
+gdaltranslate<-(paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\""))
 # prepare some functions and store it to LUMENS project file, so it can be used later
 # RESAVE function
 resave <- function(..., list = character(), file) {
@@ -307,7 +311,7 @@ save(LUMENS_path_user,
      file=proj.file)
 # write the properties of reference data to PostgreSQL
 eval(parse(text=(paste("list_of_data_pu<-data.frame(RST_DATA='ref', RST_NAME=names(ref), LUT_NAME='lut_ref', row.names=NULL)", sep=""))))
-csv_file<-paste(project_path,"/csv_planning_unit.csv", sep="")
+csv_file<-paste(LUMENS_path_user,"/csv_planning_unit.csv", sep="")
 write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")
 
 dbWriteTable(DB, "list_of_data_pu", list_of_data_pu, append=TRUE, row.names=FALSE)
@@ -425,9 +429,6 @@ done(rtffile)
 
 #command<-paste("start ", "winword ", project_path, "/LUMENS_Create-Project_report.lpr", sep="" )
 #shell(command)
-
-setwd(LUMENS_path_user)
-unlink(list.files(pattern="*"))
 
 #=Writing final status message (code, message)
 statuscode<-1
