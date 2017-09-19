@@ -118,10 +118,10 @@ if(type==0){
   dbWriteTable(DB, InPuLUT_i, eval(parse(text=(paste(InPuLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
   # pgWriteRast(DB, c("public", InPu_i), raster=eval(parse(text=(paste(InPu_i, sep="" )))))
   
-  #write to csv
-  list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
-  csv_file<-paste(dirname(proj.file),"/csv_", category, ".csv", sep="")
-  write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")
+  #write to csv # rudimentary, removed
+  # list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
+  # csv_file<-paste(dirname(proj.file),"/csv_", category, ".csv", sep="")
+  # write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")
   
   addRasterToPG(project, data, InPu_i, srid)
   
