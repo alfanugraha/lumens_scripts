@@ -94,12 +94,8 @@ if(type==0){
   #write to csv 
   list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
-<<<<<<< HEAD
-  write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
-=======
   write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")
->>>>>>> 31e4ac6270f614f45f2c12e4aa774929366194b5
-  
+
   addRasterToPG(project, data, InHistLanduse_i, srid)
   
   # resave index
