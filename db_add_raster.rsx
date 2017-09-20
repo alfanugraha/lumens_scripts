@@ -122,7 +122,7 @@ if(type==0){
   list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")
-  
+
   addRasterToPG(project, data, InPu_i, srid)
   
   resave(idx_pu, file=proj.file)

@@ -2,8 +2,6 @@
 ##proj.file=string
 ##database_status=output table
 
-library(tcltk)
-
 load(proj.file)
 
 numberOfObject<-length(ls(all.names=T))
@@ -46,121 +44,55 @@ database_status<-as.data.frame(rbind(status_country, status_location, status_pro
 database_status$V1<-as.character(factor(database_status$V1))
 database_status$V2<-as.character(factor(database_status$V2))
 
-#all maps
-#check Landuse_ var
-row.names(database_status)<-NULL
-status_landuse<-as.data.frame(ls(pattern="freq"))
-n<-nrow(status_landuse)
-if(n!=0){
-data.y<-NULL
-for (q in 1:n) {
-data.x<-substr(as.character(factor(status_landuse[q,1])), 5, 14)
-data.z<-names(eval(parse(text=(paste(data.x, sep="")))))
-if(q==1){
-data.y<-data.frame(data.x,data.z)
-} else {
-data_temp<-data.frame(data.x,data.z)
-data.y<-rbind(data.y,data_temp)
-}
-}
-colnames(data.y)[1]="V1"
-colnames(data.y)[2]="V2"
-status_landuse<-as.data.frame(data.y)
-database_status<-rbind(database_status, status_landuse)
-}
-
-#check Peat_ var
-status_peat<-as.data.frame(ls(pattern="Peat"))
-n<-nrow(status_peat)
-if(n!=0){
-  data.y<-NULL
-  for (q in 1:n) {
-    data.x<-as.character(factor(status_peat[q,1]))
-    data.z<-names(eval(parse(text=(paste(data.x, sep="")))))
-    if(q==1){
-      data.y<-data.frame(data.x,data.z)
-    } else {
-      data_temp<-data.frame(data.x,data.z)
-      data.y<-rbind(data.y,data_temp)
+#check inputted data on the temporary folder
+setwd(LUMENS_path_user)
+abbrvs <- c("luc", "pu", "f", "lut")
+categories <- c("land_use_cover", "planning_unit", "factor_data", "lookup_table")
+for(d in 1:length(categories)){
+  # check whether csv is exist
+  logic <- eval(parse(text=paste0("file.exists('csv_", categories[d], ".csv')")))
+  if(logic){
+    eval(parse(text=paste0("list_of_data_", abbrvs[d], "<-read.table('csv_", categories[d], ".csv', header=T, sep=',')")))
+    if(abbrvs[d]!="lut"){
+      eval(parse(text=(paste0("V1<-as.character(list_of_data_", abbrvs[d], "$RST_DATA)"))))
+      eval(parse(text=(paste0("V2<-as.character(list_of_data_", abbrvs[d], "$RST_NAME)"))))
+      status_landuse<-cbind(V1, V2)
+      database_status<-rbind(database_status, status_landuse)
+      if(abbrvs[d]=="luc"){
+        eval(parse(text=(paste0("V1<-paste0('period', substr(list_of_data_", abbrvs[d], "$RST_DATA, 13, 15))"))))
+        eval(parse(text=(paste0("V2<-as.character(list_of_data_", abbrvs[d], "$PERIOD)"))))  
+        status_period<-cbind(V1, V2)
+        database_status<-rbind(database_status, status_period)
+      }
     }
   }
-  colnames(data.y)[1]="V1"
-  colnames(data.y)[2]="V2"
-  status_peat<-as.data.frame(data.y)
-  database_status<-rbind(database_status, status_peat)
-}
-
-#check pu_ var
-status_pu<-as.data.frame(as.character(ls(pattern="pu_pu")))
-n<-nrow(status_pu)
-if (n!=0) {
-data.y<-NULL
-for (q in 1:n) {
-data.x<-as.character(factor(status_pu[q,]))
-data.z<-names(eval(parse(text=(paste(data.x, sep="")))))
-if(q==1){
-data.y<-data.frame(data.x,data.z)
-} else {
-data_temp<-data.frame(data.x,data.z)
-data.y<-rbind(data.y,data_temp)
-}
-}
-colnames(data.y)[1]="V1"
-colnames(data.y)[2]="V2"
-status_pu<-as.data.frame(data.y)
-database_status<-rbind(database_status, status_pu)
-} else {
-status_pu<-c("ref", eval(parse(text=(paste("names(ref)")))) )
-database_status<-rbind(database_status, status_pu)
 }
 
 #index
-status_PUR.index<-c("idx_PUR", eval(parse(text=(paste("idx_PUR")))) )
-status_PreQUES.index<-c("idx_PreQUES", eval(parse(text=(paste("idx_PreQUES")))) )
-status_QUESB.index<-c("idx_QUESB", eval(parse(text=(paste("idx_QUESB")))) )
-status_QUESC.index<-c("idx_QUESC", eval(parse(text=(paste("idx_QUESC")))) )
-status_QUESH.index<-c("idx_QUESH", eval(parse(text=(paste("idx_QUESH")))) )
-status_SCIENDO1.index<-c("idx_SCIENDO_led", eval(parse(text=(paste("idx_SCIENDO_led")))) )
-status_SCIENDO2.index<-c("idx_SCIENDO_lucm", eval(parse(text=(paste("idx_SCIENDO_lucm")))) )
-status_TA1.index<-c("idx_TA_opcost", eval(parse(text=(paste("idx_TA_opcost")))) )
-status_TA2.index<-c("idx_TA_regeco", eval(parse(text=(paste("idx_TA_regeco")))) )
-status_landuse.index<-c("idx_landuse", eval(parse(text=(paste("idx_landuse")))) )
-status_factor.index<-c("idx_factor", eval(parse(text=(paste("idx_factor")))) )
-status_lut.index<-c("idx_lut", eval(parse(text=(paste("idx_lut")))) )
-status_lut_carbon.index<-c("idx_lut_carbon", eval(parse(text=(paste("idx_lut_carbon")))) )
-status_lut_landuse.index<-c("idx_lut_landuse", eval(parse(text=(paste("idx_lut_landuse")))) )
-status_lut_zone.index<-c("idx_lut_pu", eval(parse(text=(paste("idx_lut_pu")))) )
+status_PUR.index<-c("PUR", eval(parse(text=(paste("idx_PUR")))) )
+status_PreQUES.index<-c("PreQUES", eval(parse(text=(paste("idx_PreQUES")))) )
+status_QUESB.index<-c("QUES-B", eval(parse(text=(paste("idx_QUESB")))) )
+status_QUESC.index<-c("QUES-C", eval(parse(text=(paste("idx_QUESC")))) )
+status_QUESH.index<-c("QUES-H", eval(parse(text=(paste("idx_QUESH")))) )
+status_SCIENDO1.index<-c("SCIENDO Low emission", eval(parse(text=(paste("idx_SCIENDO_led")))) )
+status_SCIENDO2.index<-c("SCIENDO Land use simulation", eval(parse(text=(paste("idx_SCIENDO_lucm")))) )
+status_TA1.index<-c("TA Cost-benefit analysis", eval(parse(text=(paste("idx_TA_opcost")))) )
+status_TA2.index<-c("TA Regional economy", eval(parse(text=(paste("idx_TA_regeco")))) )
+status_landuse.index<-c("Land-use/cover map(s)", eval(parse(text=(paste("idx_landuse")))) )
+status_pu.index<-c("Zone map(s)", eval(parse(text=(paste("idx_pu")))) )
+status_factor.index<-c("Factor map(s)", eval(parse(text=(paste("idx_factor")))) )
+status_lut.index<-c("Lookup table", eval(parse(text=(paste("idx_lut")))) )
 database_status<-rbind(database_status, status_PUR.index, status_PreQUES.index,
 status_QUESB.index, status_QUESC.index, status_QUESH.index,
-status_SCIENDO1.index, status_SCIENDO2.index, status_TA1.index,
-status_TA2.index, status_landuse.index, status_factor.index,
-status_lut.index, status_lut_carbon.index, status_lut_landuse.index, status_lut_zone.index)
+status_SCIENDO1.index, status_SCIENDO2.index, status_TA1.index, status_TA2.index,
+status_landuse.index, status_pu.index, status_factor.index, status_lut.index)
 
-#check period
-status_period<-as.data.frame(as.character(ls(pattern="period\\d")))
-n<-nrow(status_period)
-if (n!=0) {
-data.y<-NULL
-for (q in 2:n) {
-data.x<-as.character(factor(status_period[q,]))
-data.z<-eval(parse(text=(paste(data.x, sep=""))))
-if(q==2){
-data.y<-data.frame(data.x,data.z)
-} else {
-data_temp<-data.frame(data.x,data.z)
-data.y<-rbind(data.y,data_temp)
-}
-}
-colnames(data.y)[1]="V1"
-colnames(data.y)[2]="V2"
-status_period<-as.data.frame(data.y)
-database_status<-rbind(database_status, status_period)
-}
 row.names(database_status)<-NULL
 colnames(database_status)[1]="Data"
 colnames(database_status)[2]="Value"
 
 #=Create HTML file (.html)
+setwd(dirname(proj.file))
 htmlproject<-paste("status_LUMENS_database.html", sep="")
 sink(htmlproject)
 cat("<!DOCTYPE html>")
