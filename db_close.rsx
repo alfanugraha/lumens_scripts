@@ -1,8 +1,8 @@
-##[LUMENS]=group
-##project_file=file
+##DB-PostgreSQL=group
+##project_file=string
 ##passfilenames
 
 load(project_file)
 
 setwd(LUMENS_path_user)
-file.remove(list.files())
+unlink(list.files(pattern="*"))
