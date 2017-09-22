@@ -45,6 +45,16 @@ library(rpostgis)
 #=Set time start
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
+# unzipping the .lpj file defined in 'file_to_extract' at the destination_folder
+proj_zfile <- grep(pattern = ".lpj$", zip_list(zipfile = file_to_extract)$filename, value=TRUE)
+dir_name <- substr(proj_zfile, 1, (nchar(proj_zfile)-4))
+if(!dir.exists(paste0(working_directory, "/", dir_name))) dir.create(paste0(working_directory, "/", dir_name))
+unzip(file_to_extract, exdir = paste0(working_directory, "/", dir_name))
+
+# loading the original .lpj file AD inc====
+proj.file <- paste0(working_directory, "/", dir_name,"/", dir_name, ".lpj")
+load(proj.file)
+
 # check desktop architecture AD include====
 win_arch=Sys.getenv("R_ARCH")
 LUMENS_path = paste0(Sys.getenv("ProgramFiles"), "\\LUMENS")
@@ -130,12 +140,12 @@ if(!dir.exists(LUMENS_path_user)) dir.create(LUMENS_path_user, mode="0777")
 setwd(LUMENS_path_user)
 unlink(list.files(pattern="*"))
 
-# unzipping the .lpj file defined in 'file_to_extract' at the destination_folder
-proj_file <- grep(pattern = ".lpj$", zip_list(zipfile = file_to_extract)$filename, value=TRUE)
-dir_name <- substr(proj_file, 1, (nchar(proj_file)-4))
-if(!dir.exists(paste0(working_directory, "/", dir_name))) dir.create(paste0(working_directory, "/", dir_name))
-unzip(file_to_extract,files = ".lpj$", exdir = paste0(working_directory, "/", dir_name))
+# getting an information of windows architecture through the path of LUMENS installation AD inc====
+gdaltranslate<-(paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\""))
+gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
 
+# AD testonly saving the newly defined variable----
+# save(gdalraster, gdaltranslate, LUMENS_path, LUMENS_path_user, postgre_path, processing_path,win_arch, working_directory, file = "mod_vars.RData")
 
 #=Set reference data====
 # save as temporary data 
@@ -145,7 +155,6 @@ writeOGR(admin_attribute, dsn=project_path, "ref", overwrite_layer=TRUE, driver=
 shp_dir<-paste(project_path,"/", "ref.shp", sep="")
 file_out<-paste(project_path, "/", "ref.tif", sep="")
 res<-spat_res
-gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
 osgeo_comm<-paste(gdalraster, shp_dir, file_out,"-a IDADM -tr", res, res, "-a_nodata 255 -ot Byte", sep=" ")
 system(osgeo_comm)
 
@@ -172,6 +181,7 @@ lut_ref<-read.table(dissolve_table, header=TRUE, sep=",")
 colnames(lut_ref)[2]="ADMIN_UNIT"
 
 # Adjustment of 'ref' variable AD inc====
+ref@file@name <- paste0(working_directory, "/", dir_name, "/ref.tif")
 
 # set batch parameter AD inc ADD also the restoration of the database====
 pgEnvBatch <- paste(LUMENS_path_user, "/pg_env.bat", sep="")
@@ -187,6 +197,7 @@ createNewPGTbl = pathEnv
 createNewPGTbl[6] = paste("createdb ", project, sep="")
 createNewPGTbl[7] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis;"', sep="")
 createNewPGTbl[8] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis_topology;"\n', sep="")
+createNewPGTbl[9] = paste0('psql -d ', project, ' < ', working_directory, "/", dir_name, "/", dir_name, ".sql")
 
 newBatchFile <- file(pgEnvBatch)
 writeLines(createNewPGTbl, newBatchFile)
@@ -227,14 +238,8 @@ file.rename("ref.tif", "base.tif")
 unlink(list.files(pattern = "ref"))
 file.rename("base.tif", "ref.tif")
 
-# write project properties into table AD inc to be changed into table properties adjustment====
-proj_descr <- as.data.frame(rbind(project, description, working_directory, location, province, country))
-test<-c(rownames(proj_descr))
-proj_descr<-cbind(test, proj_descr)
-colnames(proj_descr)[1]<-"Type"
-colnames(proj_descr)[2]<-"Description"
-proj_descr<-as.data.frame(proj_descr)
-proj.file<-paste(project_path, "/",project,".lpj", sep="")
+# write project properties into table AD inc to be changed into table properties adjustment AD to edit the proj.file====
+proj_descr[proj_descr$Type= "working_directory","Description"] <- working_directory
 
 #=Set all values, functions, and initial indices to zero, for each index serves as a counter====
 # e.g landuse.index serve as a counter of landuse numbers
@@ -258,8 +263,7 @@ idx_SCIENDO_led=0
 idx_SCIENDO_lucm=0
 idx_TA_opcost=0
 idx_TA_regeco=0
-# getting an information of windows architecture through the path of LUMENS installation AD inc====
-gdaltranslate<-(paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\""))
+
 # prepare some functions and store it to LUMENS project file, so it can be used later ====
 # RESAVE function
 resave <- function(..., list = character(), file) {
@@ -301,7 +305,6 @@ save(LUMENS_path_user,
      LUMENS_path,
      pgEnvBatch,
      pathEnv,
-     idx_landuse,
      proj_descr,
      ref,
      srid,
@@ -310,6 +313,7 @@ save(LUMENS_path_user,
      province,
      country,
      cov_desc,
+     idx_landuse,
      idx_pu,
      idx_rec_pu,
      idx_factor,
@@ -460,6 +464,6 @@ done(rtffile)
 
 #=Writing final status message (code, message) AD inc to be changed====
 statuscode<-1
-statusmessage<-"LUMENS database has been created!"
+statusmessage<-"LUMENS database has been successfully imported!"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
 
