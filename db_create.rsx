@@ -233,7 +233,7 @@ idx_SCIENDO_lucm=0
 idx_TA_opcost=0
 idx_TA_regeco=0
 # getting an information of windows architecture through the path of LUMENS installation 
-gdaltranslate<-(paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\""))
+gdaltranslate<-paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\"")
 # prepare some functions and store it to LUMENS project file, so it can be used later
 # RESAVE function
 resave <- function(..., list = character(), file) {
