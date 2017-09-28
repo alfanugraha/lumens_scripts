@@ -66,12 +66,9 @@ if(type==0){
   eval(parse(text=(paste(period_i, "<-period", sep="" ))))
   index1<-idx_landuse
   
-  # tryCatch({
-  #   raster_category(category=category, raster_data=tif_file, name=paste("in_hist_", data_name, index1, sep=""), desc=description) 
-  # }, error=function(e){ 
-  #   statuscode<-0
-  #   statusmessage<-e    
-  # })
+  raster_temp<-reclassify(tif_file, cbind(NA, 255)) # need to set as a dynamic variable
+  raster_temp_name<-paste0(LUMENS_path_user, "/raster_temp.tif")
+  writeRaster(raster_temp, filename=raster_temp_name, format="GTiff", overwrite=TRUE)
   
   attribute_table<-read.table(attribute_table, sep=",")
   colnames(attribute_table)<-c("ID", "Old_Legend", "Legend", "Classified")
@@ -89,14 +86,13 @@ if(type==0){
   
   dbWriteTable(DB, "list_of_data_luc", list_of_data_luc, append=TRUE, row.names=FALSE)
   dbWriteTable(DB, InHistLanduseLUT_i, eval(parse(text=(paste(InHistLanduseLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
-  # pgWriteRast(DB, c("public", InHistLanduse_i), raster=eval(parse(text=(paste(InHistLanduse_i, sep="" )))))
   
   #write to csv 
   list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")
   
-  addRasterToPG(project, data, InHistLanduse_i, srid)
+  addRasterToPG(project, raster_temp_name, InHistLanduse_i, srid)
   
   # resave index
   eval(parse(text=(paste("resave(idx_landuse, idx_period, ", period_i, ", file=proj.file)", sep=""))))
@@ -111,19 +107,14 @@ if(type==0){
   idx_pu<-idx_pu+1
   index1<-idx_pu
   
-  # tryCatch({
-  #   raster_category(category=category, raster_data=tif_file, name=paste(data_name, index1, sep=""), desc=description)
-  # }, error=function(e){ 
-  #   statuscode<-0
-  #   statusmessage<-e 
-  #   print(e)
-  # })
-  
+  raster_temp<-reclassify(tif_file, cbind(NA, 255)) # need to set as a dynamic variable
+  raster_temp_name<-paste0(LUMENS_path_user, "/raster_temp.tif")
+  writeRaster(raster_temp, filename=raster_temp_name, format="GTiff", overwrite=TRUE)
+
   attribute_table<-read.table(attribute_table, sep=",")
   colnames(attribute_table)<-c("ID", attribute_field_id)
-  #null kolom ketiga
-  eval(parse(text=(paste(data_name, "_lut", pu.index, "<-attribute_table",  sep=""))))
-  #merge(?)
+  
+  eval(parse(text=(paste(data_name, "_lut", idx_pu, "<-attribute_table",  sep=""))))
   
   eval(parse(text=(paste("list_of_data_pu<-data.frame(RST_DATA='", data_name, idx_pu,"', RST_NAME='", description, "',", "LUT_NAME='", data_name, "_lut", idx_pu, "', row.names=NULL)", sep=""))))
   
@@ -132,14 +123,13 @@ if(type==0){
   
   dbWriteTable(DB, "list_of_data_pu", list_of_data_pu, append=TRUE, row.names=FALSE)
   dbWriteTable(DB, InPuLUT_i, eval(parse(text=(paste(InPuLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
-  # pgWriteRast(DB, c("public", InPu_i), raster=eval(parse(text=(paste(InPu_i, sep="" )))))
   
   #write to csv
   list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")    
   
-  addRasterToPG(project, data, InPu_i, srid)
+  addRasterToPG(project, raster_temp_name, InPu_i, srid)
   
   resave(idx_pu, file=proj.file)
   

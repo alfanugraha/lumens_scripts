@@ -139,4 +139,6 @@ for(row in 0:n_status){
 cat("</table></body></html>")
 sink()
 
+resave(database_status, file=proj.file)
+
 gc()

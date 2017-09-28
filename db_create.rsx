@@ -247,10 +247,10 @@ resave <- function(..., list = character(), file) {
 #   lazyLoad(filebase = filebase, envir = envir, filter = function(x) x == symbol)
 # }
 # GETRASTERFROMPG function
-getRasterFromPG<-function(pg_conf, pg_database, pg_table, pg_rasterfile) { # pg_nodata=0
+getRasterFromPG<-function(pg_conf, pg_database, pg_table, pg_rasterfile) { 
   if(!file.exists(pg_rasterfile)){
     postgres_connection<-paste('PG:\"host=', as.character(pg_conf$host), ' port=', as.character(pg_conf$port), ' dbname=\'', pg_database, '\' user=\'', as.character(pg_conf$user), '\' password=\'', as.character(pg_conf$pass), '\' schema=\'public\'', sep="")
-    gdaltranslate_cmd<-paste("\"", gdaltranslate, "\" ", postgres_connection, sep="")
+    gdaltranslate_cmd<-paste(gdaltranslate, postgres_connection, sep=" ")
     
     postgres_table<-paste('table=\'', pg_table, '\' mode=2\"', sep="")
     # postgres_output<-paste('-a_nodata', pg_nodata, pg_rasterfile, sep=" ")

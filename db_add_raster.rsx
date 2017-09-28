@@ -53,13 +53,17 @@ if(type==0){
   eval(parse(text=(paste(period_i, "<-period", sep="" ))))
   index1<-idx_landuse
   
-  #create raster data
+  #create raster data & reclass the value of nodata 
   # tryCatch({
   #   raster_category(category=category, name=paste("in_hist_", data_name, index1, sep=""), desc=description) 
   # }, error=function(e){ 
   #   statuscode<-0
   #   statusmessage<-e    
   # })
+  raster_temp<-raster(data)
+  raster_temp<-reclassify(raster_temp, cbind(NA, 255)) # need to set as a dynamic variable
+  raster_temp_name<-paste0(LUMENS_path_user, "/raster_temp.tif")
+  writeRaster(raster_temp, filename=raster_temp_name, format="GTiff", overwrite=TRUE)
   
   #create attribute table
   attribute_table<-read.table(attribute_table, sep=",")
@@ -82,7 +86,7 @@ if(type==0){
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_luc, csv_file, quote=FALSE, row.names=FALSE, sep=",")
   
-  addRasterToPG(project, data, InHistLanduse_i, srid)
+  addRasterToPG(project, raster_temp_name, InHistLanduse_i, srid)
 
   # resave index
   eval(parse(text=(paste("resave(idx_landuse, idx_period, ", period_i, ", file=proj.file)", sep=""))))
@@ -103,6 +107,10 @@ if(type==0){
   #   statuscode<-0
   #   statusmessage<-e    
   # })
+  raster_temp<-raster(data)
+  raster_temp<-reclassify(raster_temp, cbind(NA, 255)) # need to set as a dynamic variable
+  raster_temp_name<-paste0(LUMENS_path_user, "/raster_temp.tif")
+  writeRaster(raster_temp, filename=raster_temp_name, format="GTiff", overwrite=TRUE)
   
   attribute_table<-read.table(attribute_table, sep=",")
   colnames(attribute_table)<-c("ID", "COUNT", "Legend")
@@ -123,7 +131,7 @@ if(type==0){
   csv_file<-paste(LUMENS_path_user,"/csv_", category, ".csv", sep="")
   write.table(list_of_data_pu, csv_file, quote=FALSE, row.names=FALSE, sep=",")
 
-  addRasterToPG(project, data, InPu_i, srid)
+  addRasterToPG(project, raster_temp_name, InPu_i, srid)
   
   resave(idx_pu, file=proj.file)
   
