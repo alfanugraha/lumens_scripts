@@ -36,3 +36,4 @@ for(d in 1:length(data_types)){
 }
 
 overview<-ref
+dbDisconnect(DB)
