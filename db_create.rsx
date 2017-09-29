@@ -258,6 +258,7 @@ getRasterFromPG<-function(pg_conf, pg_database, pg_table, pg_rasterfile) {
     system(gdaltranslate_cmd_pu)
   }
   loadRaster<-raster(pg_rasterfile)
+  loadRaster<-reclassify(loadRaster, cbind(255, NA))
   
   # define projection
   crs(loadRaster)<-as.character(cov_desc[3,2])
