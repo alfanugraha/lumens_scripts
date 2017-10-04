@@ -81,7 +81,11 @@ if(!ref.obj){
 # planning unit
 if (data_pu$RST_DATA=="ref") {
   zone<-ref
-  lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  count_ref<-as.data.frame(freq(ref))
+  count_ref<-na.omit(count_ref)
+  colnames(count_ref)<-c("IDADM", "COUNT")
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  lookup_z<-merge(count_ref, ref_table, by="IDADM")
 } else {
   zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
   lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
@@ -120,35 +124,6 @@ if (grepl("+units=m", as.character(ref@crs))){
                          type = "ok")
   quit()
 }
-
-#=Check peat data
-# check_peat<-as.data.frame(as.character(ls(pattern="peat.index")))
-# if(nrow(check_peat)!=0){
-#   peat_map<-Peat_1*100
-#   zone_peat_map<-zone+peat_map 
-#   
-#   legend_zone_peat<-as.data.frame(freq(zone_peat_map))
-#   colnames(legend_zone_peat)[1]="ID"
-#   legend_zone_peat<-merge(lut.pu, legend_zone_peat, by="ID", all=T)
-#   colnames(legend_zone_peat)[2]="Z_NAME"
-#   legend_zone_peat$count<-NULL
-#   legend_zone_peat<-legend_zone_peat[which(legend_zone_peat$ID != "NA"),]
-#   n_legend_zone_peat<-nrow(legend_zone_peat)
-#   
-#   #fill Z_NAME for peat
-#   legend_zone_peat$Z_NAME<-as.character(legend_zone_peat$Z_NAME)
-#   for(i in 1:(n_legend_zone_peat)){
-#     if(legend_zone_peat[i,1] > 100){
-#       id<-legend_zone_peat[i,1]-100
-#       temp<-lut.pu[which(lut.pu$ID == id),]
-#       legend_zone_peat[i,2]<-paste(as.character(temp[1,2]), ".gambut", sep="")
-#     }
-#   }
-#   
-#   lut.pu<-legend_zone_peat
-#   zone<-zone_peat_map
-#   lut.pu_peat<-legend_zone_peat
-# } 
 
 #=Set project properties
 title=location
