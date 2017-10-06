@@ -11,6 +11,9 @@ library(reshape)
 library(ggplot2)
 library(foreign)
 library(rtf)
+library(RPostgreSQL)
+library(DBI)
+library(rpostgis)
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 

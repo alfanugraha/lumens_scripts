@@ -8,6 +8,9 @@ library(ggplot2)
 library(foreign)
 library(rtf)
 library(reshape2)
+library(RPostgreSQL)
+library(DBI)
+library(rpostgis)
 
 #=Load active project
 load(proj.file)
