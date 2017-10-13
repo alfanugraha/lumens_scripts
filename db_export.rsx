@@ -3,11 +3,6 @@
 
 #=Load library
 library(stringr)
-library(RPostgreSQL)
-library(DBI)
-library(rpostgis)
-library(zip)
-library(utils)
 
 #=Load active project that will be exported
 load(proj.file)
@@ -22,7 +17,6 @@ sql_file <- paste0(LZIP, '/', db_name, '.sql')
 
 createNewPGTbl = pathEnv
 # db_name as a new db_name.sql
-
 createNewPGTbl[6] = paste("pg_dump -d ", db_name, " > ", sql_file, sep="")
 # replacement pgEnvBatch
 newBatchFile <- file(pgEnvBatch)
@@ -33,5 +27,7 @@ pgEnvBatchFile<-str_replace_all(string=pgEnvBatch, pattern="/", repl='\\\\')
 system(pgEnvBatchFile)
 
 #=Zipping process
-zip(paste0(db_name, ".lzip"), dir(LZIP))
+zipexe<-paste0("\"", LUMENS_path, "\\bin\\zip.exe\" ")
+zip_comm<-paste0(zipexe, "-r ", paste0(db_name, ".zip"), " .")
+system(zip_comm)
 unlink(sql_file)
