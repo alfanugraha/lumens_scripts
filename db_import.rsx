@@ -1,18 +1,8 @@
 ##DB-PostgreSQL=group
-##file_to_extract = file
-##working_directory=folder
+##zip_file=string
+##new_working_directory=folder
+##proj.file=output string
 ##statusoutput=output table
-
-# AD testonly INPUT====
-# library(svDialogs)
-# repeat{
-# working_directory = dlgDir(default= "", title= paste0("Choose the directory into which the LUMENS data will be extracted"))$res
-# if(length(working_directory) != 0) break
-# }
-# repeat{
-# file_to_extract = file.choose()
-# if(length(file_to_extract) !=0) break
-# }
 
 #=Load library ====
 library(zip)
@@ -22,17 +12,15 @@ library(RPostgreSQL)
 library(DBI)
 library(rpostgis)
 
-#=Set time start
-time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
-
-# unzipping the .lpj file defined in 'file_to_extract' at the destination_folder
-proj_zfile <- grep(pattern = ".lpj$", zip_list(zipfile = file_to_extract)$filename, value=TRUE)
+# unzipping the .lpj file defined in 'zip_file' at the destination_folder
+proj_zfile <- grep(pattern = ".lpj$", unzip(zip_file, list=TRUE)[,1], value=TRUE)
 dir_name <- substr(proj_zfile, 1, (nchar(proj_zfile)-4)) # 'dir_name' is equivalent to 'project'
-if(!dir.exists(paste0(working_directory, "/", dir_name))) dir.create(paste0(working_directory, "/", dir_name))
-unzip(file_to_extract, exdir = paste0(working_directory, "/", dir_name))
+project_dir <- paste0(new_working_directory, "/", dir_name)
+if(!dir.exists(project_dir)) dir.create(project_dir)
+unzip(zip_file, exdir = project_dir)
 
 # loading the original .lpj file ====
-proj.file <- paste0(working_directory, "/", dir_name,"/", dir_name, ".lpj")
+proj.file <- paste0(project_dir, "/", dir_name, ".lpj")
 load(proj.file)
 
 # Updating desktop architecture ====
@@ -101,7 +89,7 @@ gdaltranslate<-(paste0("\"",LUMENS_path, "\\bin\\gdal_translate.exe\""))
 gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
 
 # Adjustment of 'ref' variable ====
-ref@file@name <- paste0(working_directory, "/", dir_name, "/ref.tif")
+ref@file@name <- paste0(project_dir, "/ref.tif")
 
 # set batch parameter and restore the database====
 pgEnvBatch <- paste(LUMENS_path_user, "/pg_env.bat", sep="")
@@ -117,82 +105,47 @@ createNewPGTbl = pathEnv
 createNewPGTbl[6] = paste("createdb ", dir_name, sep="")
 createNewPGTbl[7] = paste('psql -d ', dir_name, ' -c "CREATE EXTENSION postgis;"', sep="")
 createNewPGTbl[8] = paste('psql -d ', dir_name, ' -c "CREATE EXTENSION postgis_topology;"\n', sep="")
-createNewPGTbl[9] = paste0('psql -d ', dir_name, ' < ', working_directory, "/", dir_name, "/", dir_name, ".sql")
+createNewPGTbl[9] = paste0('psql -d ', dir_name, ' < ', project_dir, "/", dir_name, ".sql")
 
 newBatchFile <- file(pgEnvBatch)
 writeLines(createNewPGTbl, newBatchFile)
 close(newBatchFile)
-# execute batch file
 pgEnvBatchFile<-str_replace_all(string=pgEnvBatch, pattern="/", repl='\\\\')
-system(pgEnvBatchFile)
 
 # set driver connection====
 driver <- dbDriver('PostgreSQL')
-DB <- dbConnect(
-  driver, dbname=dir_name, host=as.character(pgconf$host), port=as.character(pgconf$port),
-  user=as.character(pgconf$user), password=as.character(pgconf$pass)
-)
+check_connection<-tryCatch({
+  DB <- dbConnect(
+    driver, dbname=dir_name, host=as.character(pgconf$host), port=as.character(pgconf$port),
+    user=as.character(pgconf$user), password=as.character(pgconf$pass)
+  )
+}, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+if(is.null(check_connection)){
+  statuscode<-0
+  statusmessage<-"Failed to import LUMENS database! Check PostgreSQL Connection"
+  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+  quit()
+} else {
+  system(pgEnvBatchFile)
+}
 
 # project properties adjustment====
 proj_descr$Description <- as.character(proj_descr$Description)
-proj_descr[proj_descr$Type== "working_directory","Description"] <- working_directory
+proj_descr[proj_descr$Type== "working_directory","Description"] <- new_working_directory
 
 #=Save all params into .RData objects====
-save(LUMENS_path_user,
-     LUMENS_path,
-     pgEnvBatch,
-     pathEnv,
-     proj_descr,
-     ref,
-     srid,
-     lut_ref,
-     location,
-     province,
-     country,
-     cov_desc,
-     idx_landuse,
-     idx_pu,
-     idx_rec_pu,
-     idx_factor,
-     idx_lut,
-     idx_lut_carbon,
-     idx_lut_landuse,
-     idx_lut_pu,
-     idx_period,
-     idx_PUR,
-     idx_PreQUES,
-     idx_QUESC,
-     idx_QUESB,
-     idx_QUESH,
-     idx_SCIENDO_led,
-     idx_SCIENDO_lucm,
-     idx_TA_opcost,
-     idx_TA_regeco,
-     win_arch,
-     processing_path,
-     gdalraster,
-     gdaltranslate,
-     addRasterToPG,
-     getRasterFromPG,
-     postgre_path,
-     pgconf,
-     resave, 
-     file=proj.file)
-# Fetch the lists of input data from the database and save it as csv====
-# identification of data which have been input: check idx_ es: factor, landuse, lut, pu
-data_types <- c("factor", "landuse", "lut", "pu")
-abbrvs <- c("f", "luc", "lut", "pu")
-categories <- c("factor_data", "land_use_cover","lookup_table","planning_unit")
-# loop
-for(d in 1:length(data_types)){
-  # check whether the value of 'idx_'data_types[d] is bigger than 0
-  logic <- eval(parse(text=paste0("idx_", data_types[d], " > 0")))
-  if(logic){
-    list_of_data_lut<-dbReadTable(DB, c("public", paste0("list_of_data_",abbrvs[d])))
-    csv_file<-paste0(LUMENS_path_user,"/csv_",categories[d],".csv")
-    write.table(list_of_data_lut, csv_file, quote=FALSE, row.names=FALSE, sep=",")
-  }
-}
+resave(LUMENS_path_user,
+       LUMENS_path,
+       pgEnvBatch,
+       pathEnv,
+       proj_descr,
+       win_arch,
+       processing_path,
+       gdalraster,
+       gdaltranslate,
+       postgre_path,
+       pgconf,
+       file=proj.file)
 
 dbDisconnect(DB)
 
