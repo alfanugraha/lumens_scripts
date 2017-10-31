@@ -7,7 +7,6 @@
 ##country=string (enter country name)
 ##admin_attribute=vector
 ##field_attribute=field admin_attribute
-##spat_res=number 50
 ##dissolve_table=file
 ##statusoutput=output table
 
@@ -30,6 +29,7 @@ time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
 # check desktop architecture
 win_arch=Sys.getenv("R_ARCH")
+user_doc = Sys.getenv("USERPROFILE")
 LUMENS_path = paste0(Sys.getenv("ProgramFiles"), "\\LUMENS")
 if (file.exists(LUMENS_path)){
   processing_path = paste0(LUMENS_path, "\\apps\\qgis\\python\\plugins\\processing\\r\\scripts")
@@ -310,6 +310,7 @@ save(LUMENS_path_user,
      getRasterFromPG,
      postgre_path,
      pgconf,
+     user_doc,
      resave, 
      file=proj.file)
 # write the properties of reference data to PostgreSQL
