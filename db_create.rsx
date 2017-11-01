@@ -7,6 +7,7 @@
 ##country=string (enter country name)
 ##admin_attribute=vector
 ##field_attribute=field admin_attribute
+##spat_res= number 50
 ##dissolve_table=file
 ##statusoutput=output table
 
