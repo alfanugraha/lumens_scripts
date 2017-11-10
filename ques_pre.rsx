@@ -21,7 +21,6 @@ library(rasterVis)
 library(reshape2)
 library(foreign)
 library(splitstackshape)
-library(tcltk)
 library(stringr)
 library(DBI)
 library(RPostgreSQL)
@@ -86,7 +85,11 @@ if(!ref.obj){
 # planning unit
 if (data_pu$RST_DATA=="ref") {
   zone<-ref
-  lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  count_ref<-as.data.frame(freq(ref))
+  count_ref<-na.omit(count_ref)
+  colnames(count_ref)<-c("IDADM", "COUNT")
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  lookup_z<-merge(count_ref, ref_table, by="IDADM")
 } else {
   zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
   lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
@@ -117,10 +120,9 @@ if (grepl("+units=m", as.character(ref@crs))){
   Spat_res<-res(ref)[1]*res(ref)[2]*(111319.9^2)/10000
   paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C will automatically generate data in Ha unit")
 } else{
-  msgBox <- tkmessageBox(title = "QUES",
-                         message = "Raster map projection is unknown",
-                         icon = "info",
-                         type = "ok")
+  statuscode<-0
+  statusmessage<-"Raster map projection is unknown"
+  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
   quit()
 }
 

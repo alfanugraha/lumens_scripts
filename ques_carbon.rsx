@@ -118,10 +118,9 @@ if (grepl("+units=m", as.character(ref@crs))){
   Spat_res<-res(ref)[1]*res(ref)[2]*(111319.9^2)/10000
   paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C will automatically generate data in Ha unit")
 } else{
-  msgBox <- tkmessageBox(title = "QUES",
-                         message = "Raster map projection is unknown",
-                         icon = "info",
-                         type = "ok")
+  statuscode<-0
+  statusmessage<-"Raster map projection is unknown"
+  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
   quit()
 }
 
