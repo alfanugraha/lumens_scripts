@@ -9,6 +9,7 @@ library(rpostgis)
 load(project_file)
 
 # clear temporary folder first
+if(!dir.exists(LUMENS_path_user)) dir.create(LUMENS_path_user)
 setwd(LUMENS_path_user)
 unlink(list.files(pattern="*"))
 
