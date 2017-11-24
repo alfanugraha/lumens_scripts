@@ -1,7 +1,6 @@
 ##DB-PostgreSQL=group
 ##zip_file=string
 ##new_working_directory=folder
-##proj.file=output string
 ##statusoutput=output table
 
 #=Load library ====
@@ -39,6 +38,7 @@ if(!file.exists(postgre_path)){
     statuscode<-0
     statusmessage<-"Please install PostgreSQL database.."
     statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+    unlink(project_dir, recursive=T)
     quit()
   }
 }
@@ -58,6 +58,7 @@ if(file.exists(pgconf_file)){
   statuscode<-0
   statusmessage<-"Please check PostgreSQL configuration.."
   statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+  unlink(project_dir, recursive=T)
   quit()
 }
 
@@ -69,6 +70,7 @@ if(pg_response==2){
   statuscode<-0
   statusmessage<-"Please check PostgreSQL connection.."
   statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+  unlink(project_dir, recursive=T)
   quit()
 }
 
@@ -120,10 +122,11 @@ check_connection<-tryCatch({
     user=as.character(pgconf$user), password=as.character(pgconf$pass)
   )
 }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
-if(is.null(check_connection)){
+if(!is.null(check_connection)){
   statuscode<-0
-  statusmessage<-"Failed to import LUMENS database! Check PostgreSQL Connection"
+  statusmessage<-"Failed to import LUMENS database!"
   statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+  unlink(project_dir, recursive=T)
   quit()
 } else {
   system(pgEnvBatchFile)
@@ -147,7 +150,6 @@ resave(LUMENS_path_user,
        pgconf,
        file=proj.file)
 
-dbDisconnect(DB)
 
 #=Writing final status message (code, message)  ====
 statuscode<-1

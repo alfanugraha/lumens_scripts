@@ -1,28 +1,23 @@
+##QUES-PostgreSQL=group
 ##proj.file=string
-##pd_1 = string "2000"
-##pd_2 = string "2005"
-##pristine_pd = string "1990"
-##planning_unit = string "pu_IDH_48s_100m"
-##raster.nodata = number 0
-##focal_coverage = string "asdf.csv"
-##edgecon = string "contrast_table_lut"
-##window.shape = selection Bujur sangkar; Lingkaran
-##windowsize = number 1000
-##gridres = number 10000
-
-# AD
-# QUES-B final version Bahasa Indonesia
-# 30/10/2017-17/11/2017
+##pd_1=string
+##pd_2=string
+##pristine_pd=string
+##planning_unit=string
+##raster.nodata=number 0
+##focal_coverage=string 
+##edgecon=string
+##window.shape=selection Bujur sangkar; Lingkaran
+##windowsize=number 1000
+##gridres=number 10000
+##statusoutput=output table
 
 # loading required packages====
 library(vegan)
 library(DBI)
-library(raster)
 library(RSQLite)
 library(SDMTools)
-library(sp)
 library(rtf)
-library(rgdal)
 library(spatial.tools)
 library(ggplot2)
 library(plyr)
@@ -33,7 +28,6 @@ library(rasterVis)
 library(reshape2)
 library(foreign)
 library(dplyr)
-library(tcltk)
 library(gridExtra)
 library(pracma)
 library(rgeos)
@@ -42,24 +36,24 @@ library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
 
-# INPUTS testonly====
-# proj.file= "D:/LUMENS/trial/trial/trial.lpj" # automatically defined in LUMENS; referring the loaded project
-# planning_unit="pu_IDH_48s_100m" # Dropdown from the input planning unit data
-# gridres= 10000 # filled input
-# windowsize= 1000 # filled input
-# window.shape= 1 # choose square (0) or circle (1)
-# raster.nodata= 0 # ? read from the metadata
-# pd_1 = 2000 # dropdown
-# pd_2 = 2005 # dropdown
-# pristine_pd = 1990 # dropdown which is the period in which the total focal area is regarded as pristine
-# edgecon = "contrast_table_lut" # dropdown based on the contents of the lut data list in the database
-# focal_coverage = c(1, 4, 6) # the ids of undisturbed terr forest, swamp, and mangrove
+
+proj.file= "C:/1_Testing_Data/sumsel/sumsel.lpj" 
+planning_unit="pu_IDH_48s_100m" 
+gridres= 10000 
+windowsize= 1000
+window.shape= 1 
+raster.nodata= 0
+pd_1 = 'lc2000'
+pd_2 = 'lc2005'
+pristine_pd = 'lc1990' 
+edgecon = "contrast_table_lut" 
+focal_coverage = "c:/1_Testing_Data/#LUMENS_finaltesting/3_Tabular/focal.csv" 
+
 user_doc <- Sys.getenv("USERPROFILE") # in case the create_db script has not been modified to save user_doc variable
 
 # INPUT reading process
-focal_coverage <- read.csv(focal_coverage, stringsAsFactors = FALSE)
+focal_coverage <- read.csv(focal_coverage, header=FALSE, sep=",")
 focal_coverage <- as.numeric(focal_coverage[,1])
-
 
 # Parameterization and pre-processings====
 load(proj.file) # loading the project file
@@ -70,11 +64,12 @@ fca_dir <- user_doc # directory in which the .fca file is located during the ins
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
 DB <- dbConnect(
-  driver, dbname=project, host='localhost', port=5433,
-  user='postgres', password='root'
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
 )
 
 # Setting up the working directory
+idx_QUESB<-idx_QUESB+1
 setwd(paste0(dirname(proj.file), "/QUES"))
 # derive the list of available data----
 list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
@@ -751,8 +746,8 @@ for(p in 1:length(fa_class)){
     mwfile.final<-teci.analysis(landuse_t2, eval(parse(text=paste0("lu",k+1,"_path"))))
     # reconnect with the postgresql database
     DB <- dbConnect(
-      driver, dbname=project, host='localhost', port=5433,
-      user='postgres', password='root'
+      driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+      user=as.character(pgconf$user), password=as.character(pgconf$pass)
     )
     #dbGetStatement(ll)
     
@@ -1620,4 +1615,7 @@ for(p in 1:length(fa_class)){
   }
 }
 
-
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"QUES-B analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
