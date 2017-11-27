@@ -271,6 +271,72 @@ getRasterFromPG<-function(pg_conf, pg_database, pg_table, pg_rasterfile) {
   }
   return(loadRaster)
 }
+# writeRastFile function
+writeRastFile <- function(raster_in, raster_ou_path = character(), cat = FALSE, colorpal, lookup){
+  # the function is to replace 'writeRaster' usage in the LUMENS scripts so that not only the raster file will be written as '.tif' but also the '.qml' file will be automatically created
+  writeRaster(raster_in, raster_ou_path, format = "GTiff", overwrite = TRUE)
+  # assessing the values in 'raster_in'
+  if(cat){
+    u_values <- unique(values(raster_in))
+    u_values <- u_values[!is.na(u_values)]
+  } else{
+    u_values <- numeric()
+    u_values[1] <- min(values(raster_in), na.rm = TRUE)
+    u_values[2] <- 0
+    u_values[3] <- max(values(raster_in), na.rm = TRUE)
+    u_values[2] <- u_values[1] + (u_values[3] - u_values[1])/2# the average of the min and max
+  }
+  u_values <- u_values[order(u_values)]
+  # the only difference between the continuous and discrete style is in the number of <item> under <colorrampshader>
+  # writing the qml file
+  qml_file_conn <- file(gsub(pattern = ".tif", replacement = ".qml", x = raster_ou_path))
+  qml_texts <- character()
+  # standardized lines
+  qml_texts[1] <- paste0('<!DOCTYPE qgis PUBLIC \'http://mrcc.com/qgis.dtd\' \'SYSTEM\'>')
+  qml_texts[2] <- paste0('<qgis version="2.0.0-Taoge" minimumScale="0" maximumScale="1e+08" hasScaleBasedVisibilityFlag="0">')
+  qml_texts[3] <- paste0('  <pipe>')
+  qml_texts[4] <- paste0('    <rasterrenderer opacity="1" alphaBand="-1" classificationMax="', max(u_values), '" classificationMinMaxOrigin="MinMaxFullExtentEstimated" band="1" classificationMin="', min(u_values), '" type="singlebandpseudocolor">')
+  qml_texts[5] <- paste0('      <rasterTransparency/>')
+  qml_texts[6] <- paste0('      <rastershader>')
+  qml_texts[7] <- paste0('        <colorrampshader colorRampTye="INTERPOLATED" clip="0">')
+  # generating the right number of colors according to the colorpal (using 'colorRampPalette')
+  my_col <- colorRampPalette(colorpal)
+  my_col <- my_col(length(u_values))# number of classes as the basis of color interpolation
+  # define labels for each values
+  if(cat){
+    names(lookup) <- c("values", "labels")
+    lbls <- data.frame(values = u_values, orr = seq(length(u_values)), stringsAsFactors = FALSE)
+    lookup$values <- as.numeric(lookup$values)
+    lbls <- merge(lbls, lookup, by = "values", all.x = TRUE)
+    lbls <- lbls[order(lbls$orr),"labels"]
+  } else {
+    lbls <- round(u_values,digits = 2)
+  }
+  # looping to generate the qml lines
+  for(ql in 8: (7+length(u_values))){
+    qml_texts[ql] <- paste0('          <item alpha="255" value="', u_values[ql-7], '" label="', lbls[ql-7], '" color="', my_col[ql-7], '"/>')
+  }
+  qml_texts <- c(qml_texts, paste0('        </colorrampshader>'))
+  qml_texts <- c(qml_texts, paste0('      </rastershader>'))
+  qml_texts <- c(qml_texts, paste0('    </rasterrenderer>'))
+  qml_texts <- c(qml_texts, paste0('    <brightnesscontrast brightness="0" contrast="0"/>'))
+  qml_texts <- c(qml_texts, paste0('    <huesaturation colorizeGreen="128" colorizeOn="0" colorizeRed="255" colorizeBlue="128" grayscaleMode="0" saturation="0" colorizeStrength="100"/>'))
+  qml_texts <- c(qml_texts, paste0('    <rasterresampler maxOversampling="2"/>'))
+  qml_texts <- c(qml_texts, paste0('  </pipe>'))
+  qml_texts <- c(qml_texts, paste0('  <blendMode>0</blendMode>'))
+  qml_texts <- c(qml_texts, paste0('</qgis>'))
+  # writing down the qml lines into the path specified at qml_file_conn
+  writeLines(qml_texts, qml_file_conn)
+  close(qml_file_conn)
+  # writing the .csv containing the paths of the output rasters
+  if(file.exists(paste0(LUMENS_path_user,"/ou_raster.csv"))){
+    ou_raster_paths <- read.csv(paste0(LUMENS_path_user,"/ou_raster.csv"), stringsAsFactors = FALSE)
+    ou_raster_paths <- rbind(ou_raster_paths, raster_ou_path)
+  } else {
+    ou_raster_paths <- data.frame(raster_ou_path = raster_ou_path, stringsAsFactors = FALSE)
+  }
+  write.csv(ou_raster_paths, paste0(LUMENS_path_user,"/ou_raster.csv"), row.names = FALSE)
+}
 
 #=Save all params into .RData objects
 save(LUMENS_path_user,
@@ -312,7 +378,8 @@ save(LUMENS_path_user,
      postgre_path,
      pgconf,
      user_doc,
-     resave, 
+     resave,
+     writeRastFile,
      file=proj.file)
 # write the properties of reference data to PostgreSQL
 eval(parse(text=(paste("list_of_data_pu<-data.frame(RST_DATA='ref', RST_NAME=names(ref), LUT_NAME='lut_ref', row.names=NULL)", sep=""))))
