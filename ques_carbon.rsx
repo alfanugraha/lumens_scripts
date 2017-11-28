@@ -630,7 +630,7 @@ data_zone_pub<-data_zone
 data_zone_pub$Z_CODE<-NULL
 colnames(data_zone_pub) <- c("ID", "Luas (Ha)", "Unit Perencanaan", "Rerata Karbon Periode 1", "Rerata Karbon Periode 2", "Emisi bersih", "Laju emisi")
 
-#=Create QUES-C Report (.lpr)
+#=Create QUES-C Report (.doc)
 # create maps and charts for report
 # arrange numerous colors with RColorBrewer
 myColors1 <- brewer.pal(9,"Set1")
@@ -910,7 +910,7 @@ I_O_period_2_rep<-paste("\\b","\\fs20", period2)
 chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
 chapter2<-"\\b\\fs32 ANALISIS PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
 chapter3<-"\\b\\fs32 ANALISIS PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
-rtffile <- RTF("LUMENS_QUES-C_report.lpr", font.size=9)
+rtffile <- RTF("LUMENS_QUES-C_report.doc", font.size=9)
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)
@@ -1163,7 +1163,7 @@ done(rtffile)
 eval(parse(text=(paste('rtf_QUESC_', T1, '_', T2, '_', pu_name, '<-rtffile', sep=''))))
 eval(parse(text=(paste('resave(rtf_QUESC_', T1, '_', T2, '_', pu_name, ', file=proj.file)', sep=''))))
 
-# command<-paste("start ", "winword ", dirQUESC, "/LUMENS_QUES-C_report.lpr", sep="" )
+# command<-paste("start ", "winword ", dirQUESC, "/LUMENS_QUES-C_report.doc", sep="" )
 # shell(command)
 
 dbDisconnect(DB)

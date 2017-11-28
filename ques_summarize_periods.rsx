@@ -163,7 +163,7 @@ I_O_period_2_rep<-paste("\\b","\\fs20", period2)
 chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
 chapter2<-"\\b\\fs32 ANALISA PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
 chapter3<-"\\b\\fs32 ANALISA PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
-rtffile <- RTF("LUMENS_combined_QUESC.lpr", font.size=9)
+rtffile <- RTF("LUMENS_combined_QUESC.doc", font.size=9)
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)

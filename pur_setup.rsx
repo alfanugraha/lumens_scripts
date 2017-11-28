@@ -331,7 +331,7 @@ time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-rtffile <- RTF("LUMENS_PUR_report_reconcile.lpr", font.size=9)
+rtffile <- RTF("LUMENS_PUR_report_reconcile.doc", font.size=9)
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -387,7 +387,7 @@ addNewLine(rtffile)
 
 done(rtffile)
 
-# command<-paste("start ", "winword ", wd_user, "/LUMENS_PUR_report_reconcile.lpr", sep="" )
+# command<-paste("start ", "winword ", wd_user, "/LUMENS_PUR_report_reconcile.doc", sep="" )
 # shell(command)
 
 #=Writing final status message (code, message)

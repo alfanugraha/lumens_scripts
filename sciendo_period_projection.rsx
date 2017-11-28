@@ -325,7 +325,7 @@ pu_sq0 <- pu_sq0[order(-pu_sq0$Percentage),]
 # line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 # I_O_period_1_rep<-paste("\\b","\\fs20", T1)
 # I_O_period_2_rep<-paste("\\b","\\fs20", T2)
-# rtffile <- RTF("LUMENS_SCIENDO-PHB_report.lpr", font.size=9)
+# rtffile <- RTF("LUMENS_SCIENDO-PHB_report.doc", font.size=9)
 # addParagraph(rtffile, "\\b\\fs32 Hasil Analisis\\b0\\fs20")
 # addNewLine(rtffile)
 # addNewLine(rtffile)
@@ -380,7 +380,7 @@ pu_sq0 <- pu_sq0[order(-pu_sq0$Percentage),]
 # 
 # done(rtffile)
 # 
-# command<-paste("start ", "winword ", result_dir, "/LUMENS_SCIENDO-PHB_report.lpr", sep="" )
+# command<-paste("start ", "winword ", result_dir, "/LUMENS_SCIENDO-PHB_report.doc", sep="" )
 # shell(command)
 
 #=Create .CAR file for new version of REDD Abacus

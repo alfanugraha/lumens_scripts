@@ -462,7 +462,7 @@ time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))),
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 I_O_period_1_rep<-paste("\\b","\\fs20", period1)
 I_O_period_2_rep<-paste("\\b","\\fs20", period2)
-rtffile <- RTF("LUMENS_SCIENDO-Annual_Projection_report.lpr", font.size=9)
+rtffile <- RTF("LUMENS_SCIENDO-Annual_Projection_report.doc", font.size=9)
 addParagraph(rtffile, "\\b\\fs32 Hasil Analisis\\b0\\fs20")
 addNewLine(rtffile)
 addNewLine(rtffile)

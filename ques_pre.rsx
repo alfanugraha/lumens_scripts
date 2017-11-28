@@ -516,7 +516,7 @@ if(analysis.option==2 | analysis.option==0){
   # write.dbf(alpha_beta_database, "Pre_QUES_IO_table.dbf")
 } else { print("Alpha-beta analysis is skipped") }
 
-#=Create Pre-QUES Change Report (.lpr)
+#=Create Pre-QUES Change Report (.doc)
 # create maps for report
 # arrange numerous colors with RColorBrewer
 myColors1 <- brewer.pal(9,"Set1")
@@ -599,7 +599,7 @@ I_O_period_2_rep<-paste("\\b","\\fs20", T2)
 chapter1<-"\\cf2\\b\\fs28 DATA YANG DIGUNAKAN \\cf1\\b0\\fs20"
 chapter2<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT BENTANG LAHAN \\cf1\\b0\\fs20"
 chapter3<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT UNIT PERENCANAAN \\cf1\\b0\\fs20"
-rtffile <- RTF("LUMENS_Pre-QUES_change_report.lpr", font.size=9)
+rtffile <- RTF("LUMENS_Pre-QUES_change_report.doc", font.size=9)
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)
@@ -1071,7 +1071,7 @@ if(analysis.option==3 | analysis.option==0){
   #command<-paste("resave(", newTraj, ",", newTrajsum, ",",newTrajz,",",newTrajmap, ",", sep="")
   
   #write report
-  rtffile <- RTF("LUMENS_Pre-QUES_Trajectory_report.lpr", font.size=9)
+  rtffile <- RTF("LUMENS_Pre-QUES_Trajectory_report.doc", font.size=9)
   title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
   title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Land Use Trajectory Analysis ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
   sub_title<-"\\cf2\\b\\fs32 ANALISA ALUR PENGGUNAAN LAHAN\\cf1\\b0\\fs20"
@@ -1223,7 +1223,7 @@ unlink(list.files(pattern = ".tif"))
 unlink(list.files(pattern = ".grd"))
 unlink(list.files(pattern = ".gri"))
 
-# command2<-paste("start ", "winword ", result_dir, "/LUMENS_Pre-QUES_change_report.lpr", sep="" )
+# command2<-paste("start ", "winword ", result_dir, "/LUMENS_Pre-QUES_change_report.doc", sep="" )
 # shell(command2)
 
 #CLEAN ENVIRONMENT

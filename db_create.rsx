@@ -390,7 +390,7 @@ dbWriteTable(DB, "list_of_data_pu", list_of_data_pu, append=TRUE, row.names=FALS
 dbWriteTable(DB, "lut_ref", lut_ref, row.names=FALSE)
 dbDisconnect(DB)
 
-#=Create LUMENS Project Report (.lpr)
+#=Create LUMENS Project Report (.doc)
 # arrange numerous colors with RColorBrewer
 myColors1 <- brewer.pal(9,"Set1")
 myColors2 <- brewer.pal(8,"Accent")
@@ -428,7 +428,7 @@ time_start<-paste("Proses LUMENS dimulai : ", time_start, sep="")
 time_end<-paste("Proses LUMENS selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("-------------------------------------------------------------------------------------------------------------------------------------------------------")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
-rtffile <- RTF("LUMENS_Create-Project_report.lpr", font.size=9)
+rtffile <- RTF("LUMENS_Create-Project_report.doc", font.size=9)
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)
@@ -499,7 +499,7 @@ done(rtffile)
 # detect winword
 # rtf viewer
 
-#command<-paste("start ", "winword ", project_path, "/LUMENS_Create-Project_report.lpr", sep="" )
+#command<-paste("start ", "winword ", project_path, "/LUMENS_Create-Project_report.doc", sep="" )
 #shell(command)
 
 #=Writing final status message (code, message)

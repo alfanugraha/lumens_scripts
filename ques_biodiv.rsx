@@ -1341,13 +1341,13 @@ for(p in 1:length(fa_class)){
     chapter5<-"\\b\\fs28 V. DINAMIKA IKTT DAN AREA FOKAL\\b0\\fs28"
     chapter6<-"\\b\\fs28 VI. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
     #Report 0. Cover=====
-    rtffile <- RTF("LUMENS_QUES-B_report.lpr", font.size=10, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+    rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=10, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     addPng(rtffile, "D:/LUMENS/finalization/report_material/Slide2.PNG", width = 8.267, height = 11.692)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
     
     
     #==== Report I. DATA INPUT ====
-    # rtffile <- RTF("LUMENS_QUES-B_report.lpr", font.size=10, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
+    # rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=10, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
     addParagraph(rtffile, title)
     addParagraph(rtffile, sub_title)
     addNewLine(rtffile)

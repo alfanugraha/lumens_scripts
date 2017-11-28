@@ -583,7 +583,7 @@ if (check.peat==0) {
   time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
   #area_name_rep<-paste("\\b", "\\fs20", Location, "\\b0","\\fs20")
   line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-  rtffile <- RTF("LUMENS_QUES-C_PEAT_report.lpr", font.size=9)
+  rtffile <- RTF("LUMENS_QUES-C_PEAT_report.doc", font.size=9)
   addParagraph(rtffile, title)
   addParagraph(rtffile, sub_title)
   addNewLine(rtffile)
@@ -619,5 +619,5 @@ if (check.peat==0) {
   
   done(rtffile)
   
-  command<-paste("start ", "winword ", dirQUESC_peat, "/LUMENS_QUES-C_PEAT_report.lpr", sep="" )
+  command<-paste("start ", "winword ", dirQUESC_peat, "/LUMENS_QUES-C_PEAT_report.doc", sep="" )
   shell(command)

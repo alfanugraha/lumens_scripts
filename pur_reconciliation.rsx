@@ -164,7 +164,7 @@ time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-rtffile <- RTF("LUMENS_PUR_FINAL_report.lpr", font.size=9)
+rtffile <- RTF("LUMENS_PUR_FINAL_report.doc", font.size=9)
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -195,7 +195,7 @@ done(rtffile)
 summary_PUR$COUNT<-NULL
 write.table(summary_PUR, "PUR_final_lookup_table.csv", quote=FALSE, row.names=FALSE, sep=",")
 
-# command<-paste("start ", "winword ", working_directory, "/LUMENS_PUR_FINAL_report.lpr", sep="" )
+# command<-paste("start ", "winword ", working_directory, "/LUMENS_PUR_FINAL_report.doc", sep="" )
 # shell(command)
 
 #=Writing final status message (code, message)
