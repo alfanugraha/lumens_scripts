@@ -28,6 +28,6 @@ system(pgEnvBatchFile)
 
 #=Zipping process
 zipexe<-paste0("\"", LUMENS_path, "\\bin\\zip.exe\" ")
-zip_comm<-paste0(zipexe, "-r ", paste0(db_name, ".zip"), " .")
+zip_comm<-paste0(zipexe, "-r ", paste0(db_name, ".lpa"), " .")
 system(zip_comm)
 unlink(sql_file)

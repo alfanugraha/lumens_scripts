@@ -1,8 +1,6 @@
 ##PUR-PostgreSQL=group
 ##proj.file=string
-##ref_data=vector
-##Field=field ref_data
-##data_name=string
+##ref_data=string
 ##ref_class=string
 ##ref_mapping=string
 ##pu_units=string
@@ -24,6 +22,7 @@ library(spatial.tools)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
+library(stringr)
 
 #=Load active project
 load(proj.file)
@@ -45,43 +44,35 @@ wd_user<-paste(dirname(proj.file), "/PUR/", idx_PUR, "_PUR_analysis", sep="")
 dir.create(wd_user, mode="0777")
 setwd(wd_user)
 
+#=Prepare reference data
+list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
+data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==ref_data),]
+ref<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
+ref<-reclassify(ref, cbind(255, 0))
+
+lookup_ref<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+colnames(lookup_ref)[ncol(lookup_ref)]="REFERENCE"
+
 #=Load and merge data with reference map
-# ex. ref_data<-readOGR(ref_data, "RTRWP_2014_50N")
-sa<-subset(ref_data, select=Field)
 tabel_acuan<-read.table(ref_class, header=FALSE, sep=",")
 colnames(tabel_acuan)[1]="acuan_kelas"
 colnames(tabel_acuan)[2]="acuan_kode"
 tabel_mapping<-read.table(ref_mapping, header=FALSE, sep=",") 
-colnames(tabel_mapping)[1]=Field
+colnames(tabel_mapping)[1]="REFERENCE"
 colnames(tabel_mapping)[2]="IDS"
-countrow<-nrow(tabel_mapping)
-tabel_mapping$IDO<-seq(countrow)
-ref_map<-merge(sa, tabel_mapping, by=Field)
+tabel_mapping<-merge(tabel_mapping, lookup_ref, by="REFERENCE")
+tabel_mapping$COUNT<-NULL
+colnames(tabel_mapping)[3]="IDO"
 
 #=Save reference table and map to temporary folder
-target_file<-paste(wd_user,"/PURREF_",data_name, ".csv", sep="")
+target_file<-paste(wd_user,"/", data_pu$LUT_NAME, ".csv", sep="")
 write.table(tabel_mapping, target_file, quote=FALSE, row.names=FALSE, sep=",")
 write.table(tabel_acuan, "hirarki_rekonsiliasi.csv", quote=FALSE, row.names=FALSE, sep=",")
-wd_usertemp<-paste(wd_user,"/temp", sep="")
-writeOGR(ref_map, dsn=wd_usertemp, data_name, driver="ESRI Shapefile")
-
-#=Rasterize shapefile using gdal_rasterize
-shp_dir<-paste(wd_usertemp,"/", data_name, ".shp", sep="")
-file_out<-paste(wd_user,"/", "PURREF_" ,data_name, ".tif", sep="")
-kolom_data<-paste('IDO')
-res<-res(ref)[1]
-# "gdalraster shp_dir file_out -a kolom_data -tr 100 100 -a_nodata 255 -ot Byte" (-a_nodata 65535 <- default to 64Float)
-osgeo_comm<-paste(gdalraster, shp_dir, file_out, "-a", kolom_data, "-tr", res, res, "-a_nodata 255 -ot Byte", sep=" ")
-system(osgeo_comm)
+# wd_usertemp<-paste(wd_user,"/temp", sep="")
 
 #=Prepare reference data
-datalist2<-as.data.frame(list.files(path=wd_user, pattern="PURREF", full.names=TRUE))
-ref<-as.character(datalist2[2,])
-ref.table<-as.character(datalist2[1,])
-ref <- raster(ref)
-ref.name<-names(ref)
-lookup_ref<- read.table(ref.table, header=TRUE, sep=",")
-colnames(lookup_ref)[1]<-"REFERENCE"
+datalist2<-as.data.frame(list.files(path=wd_user, pattern="in_pu", full.names=TRUE))
+ref.name<-names(ref) 
 
 #=Prepare planning units
 pu_list<-read.table(pu_units, header=FALSE, sep=",")
@@ -96,7 +87,7 @@ for(i in 1:n_pu_list){
   Type<-as.character(pu_list[i,4])
   lut_data<-paste("in_pu_lut", substring(pu_data, 6), sep="")
   
-  # get planning unit data from rdb/rdx
+  # get planning unit data 
   eval(parse(text=(paste0(lut_data, "<-dbReadTable(DB, c('public', lut_data)) "))))
   eval(parse(text=(paste0(pu_data, "<-getRasterFromPG(pgconf, project, pu_data, paste0(LUMENS_path_user, '/' , pu_data, '.tif'))"))))
   
@@ -160,8 +151,8 @@ for(l in 1:n_pu_list) {
   eval(parse(text=(paste("colnames(PUR_db)[",var_num,"]<-names(", pu_data, ")", sep=""))))
   m=m+1
 }
-colnames(lookup_ref)[3]<-ref.name
-PUR_dbmod<-merge(PUR_db,lookup_ref, by=ref.name)
+colnames(tabel_mapping)[3]<-ref.name
+PUR_dbmod<-merge(PUR_db, tabel_mapping, by=ref.name)
 for(j in 1:(n_pu_list)) {
   data_name<-as.character(pu_list[j,1])
   eval(parse(text=(paste("PUR_dbmod<-within(PUR_dbmod,{cek", j, "<-as.numeric(", data_name, "==IDS)})",sep=""))))
@@ -240,7 +231,8 @@ writeRaster(PUR_rec1, filename="PUR_reconciliation_result", format="GTiff", over
 # convert raster to shapefile using gdal polygonize
 tif_dir<-paste(wd_user,"/PUR_reconciliation_result.tif", sep="")
 file_out<-paste(wd_user, "/PUR_reconciliation_result.shp", sep="")
-gdalpolygon<-paste0("\"",LUMENS_path, "\\bin\\gdal_polygonize.py\"")
+gdalpolygon<-paste0("\"", LUMENS_path, "\\bin\\gdal_polygonize.py\"")
+# gdalpolygon<-str_replace_all(string=gdalpolygon, pattern="\\\\", repl='/')
 osgeo_comm<-paste('python', gdalpolygon, tif_dir,'-f "ESRI Shapefile"', file_out, 'PUR_reconciliation_result PU_name', sep=" ")
 system(osgeo_comm)
 PUR_rec1_shp<-readOGR(".", "PUR_reconciliation_result")

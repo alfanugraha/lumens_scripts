@@ -32,7 +32,6 @@ library(gridExtra)
 library(pracma)
 library(rgeos)
 library(zoo)
-library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
 
