@@ -58,7 +58,7 @@ focal_coverage <- as.numeric(focal_coverage[,1])
 load(proj.file) # loading the project file
 # Static parameters and variables
 time_start <- format(Sys.time())
-fca_dir <- user_doc # directory in which the .fca file is located during the installation user_doc = Sys.getenv("USERPROFILE")
+# fca_dir <- user_doc # directory in which the .fca file is located during the installation user_doc = Sys.getenv("USERPROFILE")
 # setting up the connection with the PostGre database system
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
@@ -68,7 +68,6 @@ DB <- dbConnect(
 )
 
 # Setting up the working directory
-idx_QUESB<-idx_QUESB+1
 setwd(paste0(dirname(proj.file), "/QUES"))
 # derive the list of available data----
 list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
@@ -76,8 +75,30 @@ list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
 list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
 list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
 # load the chosen planning unit raster
-zone <- getRasterFromPG(pgconf, project, list_of_data_pu[list_of_data_pu$RST_NAME == planning_unit, "RST_DATA"], paste0(list_of_data_pu[list_of_data_pu$RST_NAME == planning_unit, "RST_NAME"], ".tif"))
-lookup_z <- dbReadTable(DB, c("public", list_of_data_pu[list_of_data_pu$RST_NAME == planning_unit,"LUT_NAME"]))
+#=Set initial variables
+# reference map
+ref.obj<-exists('ref')
+ref.path<-paste(dirname(proj.file), '/ref.tif', sep='')
+if(!ref.obj){
+  if(file.exists(ref.path)){
+    ref<-raster(ref.path)
+  } else {
+    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
+  }
+}
+# planning unit
+data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==planning_unit),]
+if (data_pu$RST_DATA=="ref") {
+  zone<-ref
+  count_ref<-as.data.frame(freq(ref))
+  count_ref<-na.omit(count_ref)
+  colnames(count_ref)<-c("IDADM", "COUNT")
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  lookup_z<-merge(count_ref, ref_table, by="IDADM")
+} else {
+  zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
+  lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+}
 # load the pristine state landcover map and lookup table
 prist_lcmap <- getRasterFromPG(pgconf, project, list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "RST_DATA"], paste0(list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "RST_NAME"], ".tif"))
 prist_lut <- dbReadTable(DB, c("public", list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "LUT_NAME"]))
@@ -162,10 +183,12 @@ write.csv(lookupTableHabitat, habitat_table, row.names = FALSE, quote = FALSE)
 Spat_res <- res(ref)[1] ^ 2 / 10000 # spatial resolution in hectare unit
 location <- as.character(proj_descr[proj_descr$Type == "location", "Description"])
 quesb_dir <- paste0(getwd(), "/QUES-B")
+# Copy the .fca file into the quesb_dir
+file.copy(paste0(LUMENS_path, "/teciuf.fca"), quesb_dir, recursive = FALSE)
 
 #====G Raster Nodata Handling====
 #Raster nodata check
-nodata.cek<-0 # assign initial value of 0 to raster files checked in this routine
+nodata.cek <- 0 # assign initial value of 0 to raster files checked in this routine
 bperiod <- as.character(c(pd_1, pd_2)) # number of periods under consideration
 for (b in 1: length(bperiod)){ # checking the existance of normalized landcover maps
   raster.cek<-paste(quesb_dir,"/landuse_tNA_", bperiod[b],".tif", sep='')
@@ -291,6 +314,7 @@ focal.area<-function(landuse.character){
 }
 # function to extract the area of farea within each grid cell
 foc.area.grid.sampled<-function(foc.area, sampling.grid){
+  foc.area <- reclassify(foc.area, cbind(NA, 0))
   tothab<-extract(foc.area, sampling.grid, fun = sum, df= TRUE)
   # tothab<-data.frame(ID = sampling.grid$ID, tothab) # AD chg
   colnames(tothab) <- c("ID", "sum")
@@ -345,8 +369,8 @@ teci.analysis<-function(landuse, lu_path){
   
   #Check .FCA model
   
-  if (file.exists(paste(fca_dir,'/teciuf.fca',sep=''))){
-    fca<-paste(fca_dir,'/teciuf.fca',sep='')
+  if (file.exists(paste(quesb_dir,'/teciuf.fca',sep=''))){
+    fca<-paste(quesb_dir,'/teciuf.fca',sep='')
     print("Fragstats' model found!")
   } else { stop("Fragstats model file is not found, please make sure the file is located in your LUMENS folder in Program files")
   }
@@ -405,14 +429,17 @@ teci.analysis<-function(landuse, lu_path){
 }
 
 saveTECI<-function(mwfile, location, period){
-  file.teci<-paste('TECI_',location,'_',period,'_NA',sep='')
-  writeRaster(mwfile, filename=file.teci, format="GTiff", overwrite=TRUE)
+  file.teci<-paste('TECI_',location,'_',period,'_NA.tif',sep='')
+  tc_pal <- c("#62D849", "#0000f5", "#6B54D3")
+  writeRastFile(mwfile, file.teci, colorpal = tc_pal)
   return(print(paste(file.teci, "has been written")))
 }
 
 saveFocal<-function(foc.area, location, period){
-  file.habitat.name<-paste('focal_area_',location,'_',period, sep='')
-  writeRaster(foc.area, filename=file.habitat.name, format="GTiff", overwrite=TRUE)
+  file.habitat.name<-paste('focal_area_',location,'_',period, '.tif', sep='')
+  lu_f <- data.frame(valu = c(0,1), label = c("Others", "Focal area"), stringsAsFactors = FALSE)
+  f_pal <- c("#FFCC66", "#A5C663")
+  writeRastFile(foc.area, file.habitat.name, cat = TRUE, colorpal = f_pal, lookup = lu_f)
   return(print(paste(file.habitat.name, "has been written")))
 }
 
@@ -504,7 +531,7 @@ subsequent.changes<-function(habitat.analysis,lu_db, analysis, location, T1, T2)
   luchg.analysis.att<-luchg.analysis.att[,c("Z_NAME", "COUNT", "LUCHG")]
   luchg.analysis.att$AREA_HA <- luchg.analysis.att$COUNT * Spat_res
   luchg.analysis.att <- luchg.analysis.att[,c("Z_NAME", "LUCHG", "AREA_HA")]
-  
+  names(luchg.analysis.att) <- c("Unit Perencanaan", "Perubahan Tutupan", "Luas") # INDO ver
   setwd(quesb_folder)
   tryCatch({
     luchg.db.filename<-paste("LUCHG_",analysis,"_database",location,'_', T1,'_',T2,'.dbf', sep='')
@@ -569,7 +596,7 @@ TECI_chg <- function(T1,T2){
     scale_size(range = c(1,30), breaks = bx, labels = lbl) +
     # scale_size(range = c(1,30), breaks = bx) +
     geom_hline(yintercept = 100) +
-    geom_vline(xintercept = 100) + labs(colour = "Legenda", size = "Luas (%) focal area", x = "TECI t1", y = "TECI t2") +
+    geom_vline(xintercept = 100) + labs(colour = "Legenda", size = "Luas (%) Area Fokal", x = paste0("IKTT ", pd_1), y = paste0("IKTT ", pd_2)) +
     theme_bw() + scale_y_continuous(breaks = c(0, 25, 50, 75, 100), limits = c(0, 111)) + scale_x_continuous(breaks = c(0, 25, 50, 75, 100), limits = c(0, 111))
   plot.TECI_chg <- plot.TECI_chg + coord_equal() + theme(axis.title =element_text(colour = grey(0.1)),
                                                          axis.text= element_text(colour = grey(0.2)),
@@ -628,7 +655,7 @@ grid_map <- function(T1, T2){
   # minor.label
   aggregation_map <- gplot(background) + geom_raster(aes(fill=as.character(value)), show.legend = FALSE) #+ scale_fill_manual(values = st_cols, breaks = 0)
   # adding the sample_grid
-  aggregation_map <- aggregation_map + geom_polygon(data = sample_grid, aes(x = long, y = lat, group = group, fill = NA, colour = "Aggregation Grid"), show.legend = TRUE)
+  aggregation_map <- aggregation_map + geom_polygon(data = sample_grid, aes(x = long, y = lat, group = group, fill = NA, colour = "Unit Agregasi"), show.legend = TRUE)
   aggregation_map <- aggregation_map + scale_fill_manual(values = c("1" = "#FFCC66"), breaks = "") +
     theme(panel.background = element_rect(fill="lightgrey"),
           legend.key =  element_rect(colour = NA, fill = NA))
@@ -675,7 +702,12 @@ grid_map <- function(T1, T2){
                                                                          legend.key.width = unit(0.6, "cm")) + coord_equal()
   return(aggregation_map)
 }
-
+# function to remove 'ID' or 'ZONE' column out of the table prior the printing on report
+id.col_rm <- function(table){
+  colnams <- colnames(table)
+  colnams <- colnams[!colnams %in% c("ID", "ZONE")]
+  return(table[,colnams])
+}
 #Looping for each ecosystem====
 for(p in 1:length(fa_class)){
   result_dir=paste0(quesb_dir, '/', fa_class[p])
@@ -690,7 +722,7 @@ for(p in 1:length(fa_class)){
   # saving all of the adjustments made
   write.csv(cl_desc, classdesc, row.names = FALSE, quote = FALSE) # not using quotation to prevent error during fragstats execution
   write.csv(lookupTableHabitat, habitat_table, row.names = FALSE, quote = FALSE)
-  #Looping for each period===
+  #Looping for each period====
   dir.create(result_dir)
   setwd(result_dir)
   for(k in 1:(length(bperiod)-1)){
@@ -771,12 +803,12 @@ for(p in 1:length(fa_class)){
     #DIFA Chart Initial
     difa.init<-ggplot(difa.table.init, aes(x =difa.table.init$teci, y =difa.table.init$Cum.Sum, xend=100, yend=100)) +
       geom_area() + ggtitle(paste(location, as.character(pd_1))) +
-      labs(x = "Sorted TECI value (%)", y='Cumulative Proportion of Focal Areas (%)')
+      labs(x = "Nilai IKTT", y='Luas Kumulatif Area Fokal (%)')
     
     #DIFA Chart Final
     difa.final<-ggplot(difa.table.final, aes(x =difa.table.final$teci, y =difa.table.final$Cum.Sum, xend=100, yend=100)) +
       geom_area() + ggtitle(paste(location, as.character(pd_2))) +
-      labs(x = "Sorted TECI value (%)", y='Cumulative Proportion of Focal Areas (%)')
+      labs(x = "Nilai IKTT", y='Luas Kumulatif Area Fokal (%)')
     
     #Calculate area under the curve
     AUC.init = round((trapz(na.omit(difa.table.init$teci),difa.table.init$Cum.Sum))/100,digits=2)
@@ -891,6 +923,7 @@ for(p in 1:length(fa_class)){
       foc.area.loss.att<-arrange(foc.area.loss.att, -Proportion_of_loss)
       foc.area.loss.att$Proportion_of_loss<-round(foc.area.loss.att$Proportion_of_loss, digits=2)
       foc.area.loss.att.filename<-paste("Focal_area_loss_source_",location,'_', as.character(pd_1),'_', as.character(pd_2),'.dbf', sep='')
+      colnames(foc.area.loss.att)<-c("ID", "Perubahan_Tutupan", "Luas", "Kontribusi_Relatif")# INDO ver
       write.dbf(foc.area.loss.att, foc.area.loss.att.filename)
     } else { 
       print("No focal area loss found")
@@ -910,6 +943,7 @@ for(p in 1:length(fa_class)){
       foc.area.gain.att<-arrange(foc.area.gain.att, -Proportion_of_gain)
       foc.area.gain.att$Proportion_of_gain<-round(foc.area.gain.att$Proportion_of_gain, digits=2)
       foc.area.gain.att.filename<-paste("Focal_area_gain_source",location,'_', as.character(pd_1),'_', as.character(pd_2),'.dbf', sep='')
+      colnames(foc.area.gain.att)<-c("ID", "Perubahan_Tutupan", "Luas", "Kontribusi_Relatif") # INDO ver
       write.dbf(foc.area.gain.att, foc.area.gain.att.filename)
     } else { 
       print("No focal area gain found")
@@ -983,11 +1017,13 @@ for(p in 1:length(fa_class)){
     #write zonal stats table
     tryCatch({
       zstat.gain.recover.filename<-paste("Habitat_recovery_zonal_stat_",location,'_', as.character(pd_1),'_', as.character(pd_2),'.dbf', sep='')
+      names(zstat.habitat.recovery) <- c("ZONE", "Unit Perencanaan", "Maks", "Min", "Rerata", "SD", "Luas Perubahan", "Rerata Normal") # INDO ver
       write.dbf(zstat.habitat.recovery, zstat.gain.recover.filename)
     }, error=function(e){cat("Skipping zonal stats table export process:",conditionMessage(e), "\n")})
     
     tryCatch({
       zstat.loss.degradation.filename<-paste("Habitat_degradation_zonal_stat_",location,'_', as.character(pd_1),'_', as.character(pd_2),'.dbf', sep='')
+      names(zstat.habitat.degradation) <- c("ZONE", "Unit Perencanaan", "Maks", "Min", "Rerata", "SD", "Luas Perubahan", "Rerata Normal") # INDO ver
       write.dbf(zstat.habitat.degradation, zstat.loss.degradation.filename)
     }, error=function(e){cat("Skipping zonal stats table export process:",conditionMessage(e), "\n")})
     
@@ -1038,7 +1074,7 @@ for(p in 1:length(fa_class)){
     area_lc2[4]<-NULL
     id_length<-nrow(lulc_lut)
     myColors.lu <- myColors[1:id_length]
-    ColScale.lu<-scale_fill_manual(name="Land Use Class", breaks=unique(lulc_lut$ID), labels=lulc_lut$Legend, values=myColors.lu)
+    ColScale.lu<-scale_fill_manual(name="Kelas Tutupan Lahan", breaks=unique(lulc_lut$ID), labels=lulc_lut$Legend, values=myColors.lu)
     plot.LU1<-gplot(landuse_t1, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
       coord_equal() + ColScale.lu +
       theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -1067,11 +1103,11 @@ for(p in 1:length(fa_class)){
     colnames(area_zone)[1]<-'ID'
     colnames(area_zone)[3]<-'ZONE'
     myColors.Z <- myColors[1:length(unique(area_zone$ID))]
-    ColScale.Z<-scale_fill_manual(name="Zone Class", breaks=area_zone$ID, labels=area_zone$ZONE, values=myColors.Z)
+    ColScale.Z<-scale_fill_manual(name="Unit Perencanaan", breaks=area_zone$ID, labels=area_zone$ZONE, values=myColors.Z)
     plot.Z<-gplot(zone, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
       coord_equal() + ColScale.Z +
-      theme(plot.title = element_text(lineheight= 5, face="bold")) +
-      theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+      theme(plot.title = element_text(lineheight= 5, face="bold")) + guides( fill = guide_legend(title.position = "top", ncol = 2)) +
+      theme( legend.position = "bottom", axis.title.x=element_blank(), axis.title.y=element_blank(),
              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
              legend.title = element_text(size=8),
              legend.text = element_text(size = 6),
@@ -1086,9 +1122,9 @@ for(p in 1:length(fa_class)){
       foc.area.loss.reclass<- reclassify(chk_loss, lookup_change)
       foc.area.loss<-mosaic(foc.area.init, foc.area.loss.reclass, fun="max")
       ID<-as.data.frame(levels(ratify(foc.area.loss)));# or as.data.frame(na.omit(freq(foc.area.loss)))
-      Label<-c("Non Focal Area", "Stable Focal Area", "Focal Area loss")
+      Label<-c("Area Lainnya", "Area Fokal Tetap", "Area Fokal Terkonversi")
       FAC<-as.data.frame(cbind(ID, Label))
-      ColScale.FAC1 <-scale_fill_manual(name="Area Class", breaks=FAC$ID, labels=FAC$Label, values= c("#FFCC66", "#597814","#862D63"))
+      ColScale.FAC1 <-scale_fill_manual(name="Legenda", breaks=FAC$ID, labels=FAC$Label, values= c("#FFCC66", "#A5C663","#862D63"))
       plot.FAC.loss<-gplot(foc.area.loss, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
         coord_equal() + ColScale.FAC1 +
         theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -1106,9 +1142,9 @@ for(p in 1:length(fa_class)){
       foc.area.gain.reclass<- reclassify(chk_gain, lookup_change)
       foc.area.gain<-mosaic(foc.area.init, foc.area.gain.reclass, fun="max")
       ID<-as.data.frame(levels(ratify(foc.area.gain)));# or as.data.frame(na.omit(freq(foc.area.gain)))
-      Label<-c("Non Focal Area", "Stable Focal Area", "Focal Area gain")
+      Label<-c("Area Lainnya", "Area Fokal Tetap", "Area Fokal Terpulihkan")
       FAC<-as.data.frame(cbind(ID, Label))
-      ColScale.FAC2<-scale_fill_manual(name="Area Class", breaks=FAC$ID, labels=FAC$Label, values= c("#FFCC66", "#597814","#2C4770"))
+      ColScale.FAC2<-scale_fill_manual(name="Legenda", breaks=FAC$ID, labels=FAC$Label, values= c("#FFCC66", "#A5C663","#2C4770"))
       plot.FAC.gain<-gplot(foc.area.gain, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
         coord_equal() + ColScale.FAC2 +
         theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -1131,7 +1167,7 @@ for(p in 1:length(fa_class)){
       chg_db_data <- list_of_data_lut[list_of_data_lut$TBL_NAME == chg_db, "TBL_DATA"]
       lu_db <- dbReadTable(DB, c("public", chg_db_data))
       # loading the associated raster file as 'lu_chg' raster
-      lu_chg <- getRasterFromPG(pgconf, project, list_of_data_f[list_of_data_f$RST_NAME == gsub("xtab", "chgmap", chg_db), "RST_DATA"], paste0(gsub("xtab", "chgmap", chg_db), ".tif"))
+      lu_chg <- getRasterFromPG(pgconf, project, list_of_data_f[list_of_data_f$RST_NAME == gsub("xtab", "chgmap", chg_db), "RST_DATA"], paste0(dirname(quesb_dir), "/", gsub("xtab", "chgmap", chg_db), ".tif"))
       lu_db <- merge(lu_db,lookup_z[,c(1,3)], by.x= 'ZONE', by.y ='ID', all.x = TRUE)
       # lu_db <- lu_db[,c('ID_Z', 'ID_LC_T2', 'ID_LC_T1', 'COUNT', 'LC_T1', 'LC_T2','Z_NAME')]
       # merging the change data.frame with the class descriptors of land cover ID
@@ -1145,13 +1181,8 @@ for(p in 1:length(fa_class)){
       luchg.db.degrad<-subsequent.changes(habitat.degradation,lu_db, "Degradation", location, as.character(pd_1), as.character(pd_2))
       #Landscape level Habitat Recovery
       luchg.db.recovery<-subsequent.changes(habitat.recovery,lu_db, "Recovery", location, as.character(pd_1), as.character(pd_2))
-      
-      #top 10 habitat degradation
-      luchg.degradation.10<-luchg.db.degrad[1:10,]
-      
       #Landscape level Habitat Loss
       luchg.db.loss<-subsequent.changes(habitat.loss.NA,lu_db, "Loss", location, as.character(pd_1), as.character(pd_2))
-      
       #Zonal Stat Habitat LOSS
       luchg.db.loss.zstat<-zonal_stat(habitat.loss.NA, zone, lookup_z)
       
@@ -1169,24 +1200,24 @@ for(p in 1:length(fa_class)){
     plot.mw.init <- gplot(mwfile.init)
     plot.mw.init <- plot.mw.init + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
       geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", guide="colourbar", limits=c(0,maxval), na.value = NA)
-    plot.mw.init<- plot.mw.init + coord_equal() + labs(fill = "TECI") +theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                              legend.title = element_text(size=8, face = "bold"),
-                                                                              legend.text = element_text(size = 8),
-                                                                              legend.key.height = unit(0.375, "cm"),
-                                                                              legend.key.width = unit(0.375, "cm")
+    plot.mw.init<- plot.mw.init + coord_equal() + labs(fill = "Nilai IKTT") +theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                                    panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                                    legend.title = element_text(size=8, face = "bold"),
+                                                                                    legend.text = element_text(size = 8),
+                                                                                    legend.key.height = unit(0.375, "cm"),
+                                                                                    legend.key.width = unit(0.375, "cm")
     )
     
     #====Plot Habitat extent Map t2====
     plot.mw.fin <- gplot(mwfile.final)
     plot.mw.fin <- plot.mw.fin + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
       geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", guide="colourbar", limits=c(0,maxval), na.value = NA)
-    plot.mw.fin<- plot.mw.fin + coord_equal() + labs(fill = "TECI") +theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                            panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                            legend.title = element_text(size=8, face = "bold"),
-                                                                            legend.text = element_text(size = 8),
-                                                                            legend.key.height = unit(0.375, "cm"),
-                                                                            legend.key.width = unit(0.375, "cm")
+    plot.mw.fin<- plot.mw.fin + coord_equal() + labs(fill = "Nilai IKTT") +theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                                  panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                                  legend.title = element_text(size=8, face = "bold"),
+                                                                                  legend.text = element_text(size = 8),
+                                                                                  legend.key.height = unit(0.375, "cm"),
+                                                                                  legend.key.width = unit(0.375, "cm")
     )
     #====Plot Habitat loss and degradation====
     tryCatch({
@@ -1196,12 +1227,12 @@ for(p in 1:length(fa_class)){
       plot.HD <- gplot(habitat.degradation)
       plot.HD <- plot.HD + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
         geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", limits=c(0,maxval), guide="colourbar", na.value = NA)
-      plot.HD <- plot.HD + labs(fill = "TECI") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                        legend.title = element_text(size=8, face = "bold"),
-                                                                        legend.text = element_text(size = 8),
-                                                                        legend.key.height = unit(0.375, "cm"),
-                                                                        legend.key.width = unit(0.375, "cm"))
+      plot.HD <- plot.HD + labs(fill = "Nilai IKTT") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                              legend.title = element_text(size=8, face = "bold"),
+                                                                              legend.text = element_text(size = 8),
+                                                                              legend.key.height = unit(0.375, "cm"),
+                                                                              legend.key.width = unit(0.375, "cm"))
     }, error=function(e){cat("skipping habitat degradation plot :",conditionMessage(e), "\n")})
     
     # Habitat loss lateron
@@ -1211,12 +1242,12 @@ for(p in 1:length(fa_class)){
       plot.HL <- gplot(habitat.loss.NA)
       plot.HL <- plot.HL + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
         geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", limits=c(0,maxval), guide="colourbar", na.value = NA)
-      plot.HL <- plot.HL + labs(fill = "TECI") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                        legend.title = element_text(size=8, face = "bold"),
-                                                                        legend.text = element_text(size = 8),
-                                                                        legend.key.height = unit(0.375, "cm"),
-                                                                        legend.key.width = unit(0.375, "cm"))
+      plot.HL <- plot.HL + labs(fill = "Nilai IKTT") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                              legend.title = element_text(size=8, face = "bold"),
+                                                                              legend.text = element_text(size = 8),
+                                                                              legend.key.height = unit(0.375, "cm"),
+                                                                              legend.key.width = unit(0.375, "cm"))
     }, error=function(e){cat("skipping habitat loss plot :",conditionMessage(e), "\n")})
     
     #====Plot Habitat gain and recovery ====
@@ -1227,12 +1258,12 @@ for(p in 1:length(fa_class)){
       plot.HR <- gplot(habitat.recovery)
       plot.HR <- plot.HR + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
         geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", limits=c(0,maxval), guide="colourbar", na.value = NA)
-      plot.HR <- plot.HR + labs(fill = "TECI") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                        legend.title = element_text(size=8, face = "bold"),
-                                                                        legend.text = element_text(size = 8),
-                                                                        legend.key.height = unit(0.375, "cm"),
-                                                                        legend.key.width = unit(0.375, "cm"))
+      plot.HR <- plot.HR + labs(fill = "Nilai IKTT") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                              legend.title = element_text(size=8, face = "bold"),
+                                                                              legend.text = element_text(size = 8),
+                                                                              legend.key.height = unit(0.375, "cm"),
+                                                                              legend.key.width = unit(0.375, "cm"))
     }, error=function(e){cat("skipping habitat recovery plot :",conditionMessage(e), "\n")})
     
     tryCatch({
@@ -1241,12 +1272,12 @@ for(p in 1:length(fa_class)){
       plot.HG <- gplot(habitat.gain.NA)
       plot.HG <- plot.HG + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
         geom_raster(aes(fill=value)) + scale_fill_gradient(low = "#62D849", high="#6B54D3", limits=c(0,maxval), guide="colourbar", na.value = NA)
-      plot.HG <- plot.HG + labs(fill = "TECI") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
-                                                                        panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-                                                                        legend.title = element_text(size=8, face = "bold"),
-                                                                        legend.text = element_text(size = 8),
-                                                                        legend.key.height = unit(0.375, "cm"),
-                                                                        legend.key.width = unit(0.375, "cm"))
+      plot.HG <- plot.HG + labs(fill = "Nilai IKTT") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                              panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                              legend.title = element_text(size=8, face = "bold"),
+                                                                              legend.text = element_text(size = 8),
+                                                                              legend.key.height = unit(0.375, "cm"),
+                                                                              legend.key.width = unit(0.375, "cm"))
     }, error=function(e){cat("skipping habitat gain plot :",conditionMessage(e), "\n")})
     #====Plot Habitat loss and degradation====
     #plot.background<-gplot(background, maxpixels=100000) + geom_raster(aes(fill=as.factor(value)))
@@ -1330,23 +1361,23 @@ for(p in 1:length(fa_class)){
     t_start<-paste("Proses dimulai : ", time_start, sep="")
     time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
     line<-paste("------------------------------------------------------------------------------------------------------------------------------------------")
-    area_name_rep<-paste0("\\b", "\\fs24 ", location, "\\b0","\\fs24")
-    I_O_period_1_rep<-paste0("\\b","\\fs24 ", as.character(pd_1), "\\b0","\\fs24")
-    I_O_period_2_rep<-paste0("\\b","\\fs24 ", as.character(pd_2), "\\b0","\\fs24")
-    chapter1<-"\\b\\fs28 I. DATA INPUT\\b0\\fs28"
-    chapter2<-"\\b\\fs28 II. PERUBAHAN AREA FOKAL\\b0\\fs28"
-    chapter3<-"\\b\\fs28 III. DISTRIBUSI NILAI IKTT\\b0\\fs28"
-    chapter4<-"\\b\\fs28 IV. DEGREE OF INTEGRATION OF FOCAL AREA (DIFA)\\b0\\fs28"
-    chapter5<-"\\b\\fs28 V. DINAMIKA IKTT DAN AREA FOKAL\\b0\\fs28"
-    chapter6<-"\\b\\fs28 VI. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
-    #Report 0. Cover=====
-    rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=10, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+    area_name_rep<-paste0("\\b", "\\fs22 ", location, "\\b0","\\fs22")
+    I_O_period_1_rep<-paste0("\\b","\\fs22 ", as.character(pd_1), "\\b0","\\fs22")
+    I_O_period_2_rep<-paste0("\\b","\\fs22 ", as.character(pd_2), "\\b0","\\fs22")
+    chapter1<-"\\b\\fs28 1. DATA INPUT\\b0\\fs28"
+    chapter2<-"\\b\\fs28 2. PERUBAHAN AREA FOKAL\\b0\\fs28"
+    chapter3<-"\\b\\fs28 3. DISTRIBUSI NILAI IKTT\\b0\\fs28"
+    chapter4<-"\\b\\fs28 4. \\i DEGREE OF INTEGRATION OF FOCAL AREA\\i0  (\\i DIFA\\i0 )\\b0\\fs28"
+    chapter5<-"\\b\\fs28 5. DINAMIKA IKTT DAN AREA FOKAL\\b0\\fs28"
+    chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
+    # ==== Report 0. Cover=====
+    rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     addPng(rtffile, "D:/LUMENS/finalization/report_material/Slide2.PNG", width = 8.267, height = 11.692)
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     
     
-    #==== Report I. DATA INPUT ====
-    # rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=10, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
+    
+    # rtffile <- RTF("LUMENS_QUES-B_report.lpr", font.size=10, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     addParagraph(rtffile, title)
     addParagraph(rtffile, sub_title)
     addNewLine(rtffile)
@@ -1356,61 +1387,72 @@ for(p in 1:length(fa_class)){
     addParagraph(rtffile, time_end)
     # addParagraph(rtffile, time_end)
     addParagraph(rtffile, line)
-    # addNewLine(rtffile)
-    # addParagraph(rtffile, chapter1)
+    # ==== Report 0.1 Table of Contents page====
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    addHeader(rtffile, title = "\\qc\\b\\fs28 DAFTAR ISI\\b0\\fs28", TOC.level = 1)
+    addNewLine(rtffile, n = 1.5)
+    addTOC(rtffile)
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    
+    # ==== Report 0.2 Preface ====
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Dokumen ini dihasilkan dari penjalanan modul \\i Quantification of Ecosystem Services - Biodiversity (QUES-B) \\i0 dalam perangkat lunak LUMENS. Sistematika laporan ini adalah: pengantar yang memuat prinsip dasar analisis terdapat di bagian ini, informasi mengenai data-data yang digunakan pada bagian I, sedangkan bagian II - VII memuat intisari luaran analisis modul  \\i QUES-B\\i0 . Pada setiap bagian terdapat petunjuk singkat yang disediakan demi kemudahan pengguna dalam menginterpretasi informasi dan/atau data yang ditampilkan.\\fs24")
+    text <- paste0("\\qj Dokumen ini dihasilkan dari penjalanan modul \\i Quantification of Ecosystem Services - Biodiversity (QUES-B) \\i0 dalam perangkat lunak LUMENS. Sistematika laporan ini adalah: pengantar yang memuat prinsip dasar analisis terdapat di bagian ini, informasi mengenai data-data yang digunakan pada bagian 1, sedangkan bagian 2 - 6 memuat intisari luaran analisis modul  \\i QUES-B\\i0 . Pada setiap bagian terdapat petunjuk singkat yang disediakan demi kemudahan pengguna dalam menginterpretasi informasi dan/atau data yang ditampilkan.")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n = 1)
-    text <- paste0("\\qj\\fs24 Analisis dalam modul \\i QUES-B \\i0 bertujuan untuk memberi gambaran mengenai aspek biodiversitas suatu daerah di tingkat lanskap. Kerangka kerja yang diadopsi mengacu pada metode penelitian yang telah dipublikasikan oleh Dewi, dkk. pada tahun 2013. Sebelum proses dijalankan, pengguna menentukan kelas-kelas tutupan lahan alami yang paling merepresentasikan habitat bagi keanekaragaman hayati asli suatu lanskap. Berdasarkan peta tutupan lahan multi waktu, dinamika kondisi tutupan alami dianalisis dalam modul \\i QUES-B \\i0 sehingga dihasilkan beberapa besaran yang mengindikasikan perubahan luas dan konfigurasi tutupan alami di suatu daerah studi. Peralihan tutupan lahan yang berkontribusi terhadap dinamika kondisi tutupan alami dan luasannya dapat diketahui berdasarkan luaran modul ini. Selain itu, informasi mengenai perubahan luas dan konfigurasi tutupan alami suatu daerah disajikan secara kuantitatif dalam indeks tunggal yang disebut \\i Degree of Integration of Focal Area (DIFA)\\i0 . Indeks yang ringkas sekaligus indikatif ini akan membantu pemangku kepentingan yang harus mempertimbangan banyak aspek dalam analisis kebijakan pengelolaan lahan, khususnya dalam memperkirakan implikasi suatu keputusan terhadap kelestarian biodiversitas suatu daerah. Informasi kewilayahan juga turut melengkapi luaran modul ini untuk membantu proses dialog dan kolaborasi antar pemangku kepentingan dalam perencanaan dan pengelolaan daerah yang memperhatikan kelestarian keanekaragaman hayati.\\fs24")
+    text <- paste0("\\qj Analisis dalam modul \\i QUES-B \\i0 bertujuan untuk memberi gambaran mengenai aspek biodiversitas suatu daerah di tingkat lanskap. Kerangka kerja yang diadopsi mengacu pada metode penelitian yang telah dipublikasikan oleh Dewi, dkk. pada tahun 2013. Sebelum proses dijalankan, pengguna menentukan kelas-kelas tutupan lahan alami yang paling merepresentasikan habitat bagi keanekaragaman hayati asli suatu lanskap. Berdasarkan peta tutupan lahan multi waktu, dinamika kondisi tutupan alami dianalisis dalam modul \\i QUES-B \\i0 sehingga dihasilkan beberapa besaran yang mengindikasikan perubahan luas dan konfigurasi tutupan alami di suatu daerah studi. Peralihan tutupan lahan yang berkontribusi terhadap dinamika kondisi tutupan alami dan luasannya dapat diketahui berdasarkan luaran modul ini. Selain itu, informasi mengenai perubahan luas dan konfigurasi tutupan alami suatu daerah disajikan secara kuantitatif dalam indeks tunggal yang disebut \\i Degree of Integration of Focal Area (DIFA)\\i0 . Indeks yang ringkas sekaligus indikatif ini akan membantu pemangku kepentingan yang harus mempertimbangan banyak aspek dalam analisis kebijakan pengelolaan lahan, khususnya dalam memperkirakan implikasi suatu keputusan terhadap kelestarian biodiversitas suatu daerah. Informasi kewilayahan juga turut melengkapi luaran modul ini untuk membantu proses dialog dan kolaborasi antar pemangku kepentingan dalam perencanaan dan pengelolaan daerah yang memperhatikan kelestarian keanekaragaman hayati.")
     addParagraph(rtffile, text)
+    addNewLine(rtffile, n = 0.5)
     addNewLine(rtffile, n = 1)
-    addParagraph(rtffile, chapter1)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Analisis dalam modul \\i QUES-B \\i0 dijalankan berdasarkan masukan data berupa tabel dan peta. Tabel yang diperlukan antara lain tabel bobot kontras tepi (\\i edge contrast weight\\i0) yang memuat angka derajat perbedaan antara suatu kelas tutupan lahan terhadap kelas lainnya dalam memfasilitasi keberadaan biodiversitas asli dari area fokal. Peta tutupan lahan serta peta unit perencanaan adalah data-data spasial yang menjadi masukan utama dalam analisis. Peta tutupan lahan digunakan sebagai dasar dari penghitungan luas dan konfigurasi spasial area fokal dalam daerah studi. Penggunaan peta tutupan lahan pada dua titik waktu membuat analisis dinamika area fokal antar waktu dapat dilakukan. Pemahaman mengenai hubungan erat antara subjek pengelolaan kawasan yang beragam dengan kondisi area fokal suatu daerah melatarbelakangi pelibatan peta unit perencanaan dalam tahap penyajian hasil analisis. \\fs24")
+    #==== Report I. DATA INPUT ====
+    addHeader(rtffile, chapter1, TOC.level = 1)
+    addNewLine(rtffile, n = 1.5)
+    text <- paste0("\\qj Analisis dalam modul \\i QUES-B \\i0 dijalankan berdasarkan masukan data berupa tabel dan peta. Tabel yang diperlukan antara lain tabel bobot kontras tepi (\\i edge contrast weight\\i0) yang memuat angka derajat perbedaan antara suatu kelas tutupan lahan terhadap kelas lainnya dalam memfasilitasi keberadaan biodiversitas asli dari area fokal. Peta tutupan lahan serta peta unit perencanaan adalah data-data spasial yang menjadi masukan utama dalam analisis. Peta tutupan lahan digunakan sebagai dasar dari penghitungan luas dan konfigurasi spasial area fokal dalam daerah studi. Penggunaan peta tutupan lahan pada dua titik waktu membuat analisis dinamika area fokal antar waktu dapat dilakukan. Pemahaman mengenai hubungan erat antara subjek pengelolaan kawasan yang beragam dengan kondisi area fokal suatu daerah melatarbelakangi pelibatan peta unit perencanaan dalam tahap penyajian hasil analisis. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Pada bagian ini ditampilkan data-data spasial yang digunakan sebagai masukan dalam analisis. \\fs24")
+    text <- paste0("\\qj Pada bagian ini ditampilkan data-data spasial yang digunakan sebagai masukan dalam analisis. Analisis mencakup daerah seluas ", prettyNum(round(sum(area_lc1$count)*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar. Tutupan lahan pada daerah analisis digolongkan dalam ", nrow(lulc_lut), " kelas seperti yang ditampilkan pada peta. Selain itu, terdapat ", nrow(lookup_z.area), " unit perencanaan yang menunjukkan tipologi kawasan pengelolaan.")
     addParagraph(rtffile, text)
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-    text <- paste0("\\b\\fs24 Peta Tutupan Lahan \\b0\\fs24", area_name_rep,"  \\b\\fs24 tahun \\b0\\fs24", I_O_period_1_rep)
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    text <- paste0("\\b Peta Tutupan Lahan \\b0", area_name_rep,"  \\b tahun \\b0", I_O_period_1_rep)
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.LU1 )
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.LU1 )
     #rm(plot.LU1)
-    text <- paste0("\\b\\fs24 Peta Tutupan Lahan \\b0\\fs24", area_name_rep, "  \\b\\fs24 tahun \\b0\\fs24", I_O_period_2_rep)
+    text <- paste0("\\b Peta Tutupan Lahan \\b0", area_name_rep, "  \\b tahun \\b0", I_O_period_2_rep)
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.LU2 )
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.LU2 )
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     #rm(plot.LU2)
-    text <- paste("\\b\\fs24 Peta Unit Perencanaan\\b0\\fs24 ", area_name_rep, sep=" ")
+    text <- paste("\\b Peta Unit Perencanaan\\b0 ", area_name_rep, sep=" ")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.Z )
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height = (4 + 0.24 + round(nrow(lookup_z.area)/2, digits = 0)*0.14), res=150, plot.Z )
     #rm(plot.Z)
     addNewLine(rtffile, n=1)
-    text <- paste0("\\b\\fs24 Kelas tutupan lahan yang dijadikan sebagai area fokal: ", names(fa_class[p]), "\\b0\\fs24")
+    text <- paste0("\\b Kelas tutupan lahan yang dijadikan sebagai area fokal: ", names(fa_class[p]), "\\b0")
     addParagraph(rtffile, text)
-    addNewLine(rtffile, n=1)
+    addNewLine(rtffile, n = 0.5)
+    addNewLine(rtffile, n = 1)
     #==== Report II. Focal Area Changes ====
-    addParagraph(rtffile, chapter2)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Dalam \\i QUES-B \\i0 digunakan istilah area fokal yang didefinisikan sebagai kelas tutupan lahan yang mewakili habitat bagi keanekaragaman hayati asli suatu daerah dalam kondisi primer. Suatu daerah studi dapat saja memiliki lebih dari satu jenis area fokal namun proses analisis dilangsungkan secara unik per area fokal. Dalam analisis dinamika area fokal, modul \\i QUES-B \\i0 memperhitungkan tak hanya luas namun juga konfigurasi spasialnya. Dengan kata lain, konektifitas dan diskonektifitas antara petak-petak area fokal mempengaruhi luaran analisis \\i QUES-B\\i0. \\fs24")
+    addHeader(rtffile, chapter2, TOC.level = 1)
+    addNewLine(rtffile, n=1.5)
+    text <- paste0("\\qj Dalam \\i QUES-B \\i0 digunakan istilah area fokal yang didefinisikan sebagai kelas tutupan lahan yang mewakili habitat bagi keanekaragaman hayati asli suatu daerah dalam kondisi primer. Suatu daerah studi dapat saja memiliki lebih dari satu jenis area fokal namun proses analisis dilangsungkan secara unik per area fokal. Dalam analisis dinamika area fokal, modul \\i QUES-B \\i0 memperhitungkan tak hanya luas namun juga konfigurasi spasialnya. Dengan kata lain, konektifitas dan diskonektifitas antara petak-petak area fokal mempengaruhi luaran analisis \\i QUES-B\\i0. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Bagian ini memuat informasi mengenai perubahan luas area fokal dan perubahan tutupan lahan yang berkaitan. Luas perubahan tutupan lahan dan area fokal terdampak serta statistik lanskap dasar yang mendeskripsikan kondisi umum area fokal secara kuantitatif tersaji dalam bentuk tabel. Selain itu, peta area fokal pada dua titik waktu yang berbeda juga ditampilkan untuk memberikan gambaran visual mengenai dimensi spasial dari dinamika yang terjadi. Pada tabel kedua sebelum terakhir ditunjukkan dinamika luas area fokal pada setiap unit perencanaan serta proporsi relatif luas area fokal terdampak terhadap luas total unit perencanaan (dalam %). \\fs24")
+    text <- paste0("\\qj Bagian ini memuat informasi mengenai perubahan luas area fokal dan perubahan tutupan lahan yang berkaitan. Luas perubahan tutupan lahan dan area fokal terdampak serta statistik lanskap dasar yang mendeskripsikan kondisi umum area fokal secara kuantitatif tersaji dalam bentuk tabel. Selain itu, peta area fokal pada dua titik waktu yang berbeda juga ditampilkan untuk memberikan gambaran visual mengenai dimensi spasial dari dinamika yang terjadi. Pada tabel kedua sebelum terakhir ditunjukkan dinamika luas area fokal pada setiap unit perencanaan serta proporsi relatif luas area fokal terdampak terhadap luas total unit perencanaan (dalam %). ")
     addParagraph(rtffile, text)
-    
+    addNewLine(rtffile)
+    text <- paste0("\\qj Dalam analisis \\i QUES-B \\i0 secara keseluruhan terdapat ", length(fa_class), " kelas tutupan lahan yang didefinisikan sebagai area fokal. Laporan ini membahas secara spesifik satu kelas tutupan area fokal, yaitu ", names(fa_class[p]), ". Pada kondisi utuh yang didefinisikan berdasarkan peta tutupan lahan tahun ", pristine_pd, ", ", names(fa_class[p]), " mencakup area seluas ", prettyNum(round(totarea*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar. Pada tahun ", pd_1, " dan ", pd_2, " luas area fokal yang tersisa adalah ", prettyNum(round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]/totarea*100, digits = 2),"%) dan ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]/totarea*100, digits = 2), "%), secara berurutan. Dengan kata lain, selama ", pd_2-pd_1, " tahun terdapat perubahan luas area fokal sebesar ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar atau sebanding dengan ", round(abs(100*(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)/(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)), digits = 2), "% dari luas pada tahun ", pd_1, ".")
+    addParagraph(rtffile, text)
     if(maxValue(chk_loss)>0) {
-      addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-      text <- paste("\\b\\fs24 Peta Kelenyapan Area Fokal \\b0\\fs24", area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24-\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      addNewLine(rtffile)
+      text <- paste("\\b Peta Kelenyapan Area Fokal \\b0", area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
-      addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.FAC.loss )
+      addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.FAC.loss )
       addNewLine(rtffile, n=1)
-      text <- paste("\\b\\fs24 Tutupan Lahan Terasosiasi dengan Kelenyapan Area Fokal \\b0\\fs24",area_name_rep, " \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24", I_O_period_2_rep,  sep=" ")
+      text <- paste("\\b Tutupan Lahan Terasosiasi dengan Kelenyapan Area Fokal \\b0",area_name_rep, " \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0", I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
-      addTable(rtffile, foc.area.loss.att)
+      addTable(rtffile, id.col_rm(foc.area.loss.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
       addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
     } else {
@@ -1418,122 +1460,170 @@ for(p in 1:length(fa_class)){
     }
     
     if(maxValue(chk_gain)>0) {
-      addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-      text <- paste("\\b\\fs24 Peta Kemunculan Area Fokal \\b0\\fs24", area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24-\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      if(maxValue(chk_loss)>0){
+        addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+      } else addNewLine(rtffile, n=1)
+      text <- paste("\\b Peta Kemunculan Area Fokal \\b0", area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
-      addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.FAC.gain )
+      addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.FAC.gain )
       addNewLine(rtffile, n=1)
-      text <- paste("\\b\\fs24 Tutupan Lahan Sebelum Kemunculan Area Fokal\\b0\\fs24 ",area_name_rep,  " \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep,'\\b\\fs24-\\b0\\fs24',I_O_period_2_rep,  sep=" ")
+      text <- paste("\\b Tutupan Lahan Sebelum Kemunculan Area Fokal\\b0 ",area_name_rep,  " \\b periode \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
-      addTable(rtffile, foc.area.gain.att)
+      addTable(rtffile, id.col_rm(foc.area.gain.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
       addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
     } else {
       print("Tidak ditemukan kemunculan area fokal")
     }
     
-    text <- paste("\\b\\fs24 Perubahan Area Fokal pada Unit Perencanaan\\b0\\fs24 ",area_name_rep, " \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep,'\\b\\fs24 -\\b0\\fs24',I_O_period_2_rep,  sep=" ")
+    # description of the planning units associated with focal area change
+    # planning unit with the highest change
+    # define textif1
+    if(zstat.foc.area$foc.area.change[1] < 0){
+      textif1 <- paste0(zstat.foc.area$Legend[1], " adalah unit perencanaan dengan alih fungsi area fokal terbesar (", prettyNum(round(abs(zstat.foc.area$foc.area.change[1]), digits = 2), big.mark = ".", decimal.mark = ","), " hektar)")
+    } else{
+      textif1 <- ""
+    }
+    if(nchar(textif1)!=0) textcon <- ", sedangkan" else textcon <- ""
+    if(zstat.foc.area$foc.area.change[nrow(zstat.foc.area)] > 0){
+      textif2 <- paste0("pemulihan area fokal terbesar terdapat di unit perencanaan ", zstat.foc.area$Legend[nrow(zstat.foc.area)], " (", prettyNum(round(abs(zstat.foc.area$foc.area.change[nrow(zstat.foc.area)]), digits = 2), big.mark = ".", decimal.mark = ","), " hektar)")
+    } else {
+      textif2 <- ""
+    }
+    if(nchar(textcon) == nchar(textif2)){
+      textsubs <- "tidak ditemukan unit perencanaan yang berasosiasi dengan perubahan luas area fokal"
+    } else textsubs <- ""
+    text <- paste0("\\qj Berdasarkan lokasi terjadinya konversi dari atau menjadi kelas tutupan area fokal, diketahui bahwa ", textif1, textcon, textif2, textsubs, ".")
     addParagraph(rtffile, text)
-    addTable(rtffile, zstat.foc.area)
+    addNewLine(rtffile, n=1)
+    # Table pu focal area change
+    text <- paste("\\b Perubahan Area Fokal pada Unit Perencanaan\\b0 ",area_name_rep, " \\b periode \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
+    addParagraph(rtffile, text)
+    names(zstat.foc.area) <- c("ZONE", "Kawasan", "Luas Perubahan", "Luas Wilayah", "Proporsi Luas") # INDO ver
+    addTable(rtffile, id.col_rm(zstat.foc.area), font.size = 9, col.justify = c('L', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R'))
     addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
     addNewLine(rtffile, n=1)
-    text <- paste("\\b\\fs24 Statistik Lanskap Dasar\\b0\\fs24 ")
+    text <- paste("\\b Statistik Lanskap Dasar\\b0 ")
     addParagraph(rtffile, text)
-    addTable(rtffile, foc.area.stats, row.names=TRUE)
+    addTable(rtffile, foc.area.stats, row.names=TRUE, font.size = 9, col.justify = c('L', 'R', 'R'), header.col.justify = c('L', 'R', 'R'))
     addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar;Panjang dalam meter; Proporsi dalam persen(%)\\b0\\fs20 ")
-    addNewLine(rtffile, n=1)
-    
+    addNewLine(rtffile, n = 0.5)
+    addNewLine(rtffile, n = 1)
     #==== Report III.  Map of dissimilarities from focal area====
-    addParagraph(rtffile, chapter3)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Derajat perbedaan antara sebidang area fokal dengan kelas tutupan non fokal yang bersebelahan mempengaruhi sifat tepi, terutama permeabilitasnya (kemampuan tepi untuk meloloskan perpindahan individu spesies, materi, dll. dari area fokal). Bidang area fokal dengan ukuran, bentuk, dan konfigurasi yang sama dikatakan lebih rentan terhadap ancaman terhadap keanekaragaman hayatinya apabila tepinya bersebelahan langsung degan kelas-kelas pentutupan lahan yang derajat perbedaannya tinggi dibandingkan dengan kelas yang derajat perbedaannya rendah. Hal ini dibangun berdasarkan anggapan bahwa tepi area fokal yang berbatasan secara langsung dengan kelas yang memiliki kontras tinggi akan memiliki permeabilitas yang lebih rendah dan berlaku pula sebaliknya.\\fs24")
+    addHeader(rtffile, chapter3, TOC.level = 1)
+    addNewLine(rtffile, n=1.5)
+    text <- paste0("\\qj Derajat perbedaan antara sebidang area fokal dengan kelas tutupan non fokal yang bersebelahan mempengaruhi sifat tepi, terutama permeabilitasnya (kemampuan tepi untuk meloloskan perpindahan individu spesies, materi, dll. dari area fokal). Bidang area fokal dengan ukuran, bentuk, dan konfigurasi yang sama dikatakan lebih rentan terhadap ancaman terhadap keanekaragaman hayatinya apabila tepinya bersebelahan langsung degan kelas-kelas pentutupan lahan yang derajat perbedaannya tinggi dibandingkan dengan kelas yang derajat perbedaannya rendah. Hal ini dibangun berdasarkan anggapan bahwa tepi area fokal yang berbatasan secara langsung dengan kelas yang memiliki kontras tinggi akan memiliki permeabilitas yang lebih rendah dan berlaku pula sebaliknya.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Modul \\i QUES-B \\i0 menghitung estimasi permeabilitas suatu petak area fokal berdasarkan indeks kontras tepi total (IKTT atau \\i Total Edge Contrast Index\\i0, disingkat \\i TECI\\i0) pada tingkat sub-lanskap. Sub-lanskap ditentukan berdasarkan 'jendela bergerak' (\\i moving window\\i0) yang mengikhtisarkan indeks kontras tepi total pada area sub-lanskap yang berpusat pada setiap piksel area fokal. Pendekatan matematis yang diterapkan dalam peringkasan nilai indeks kontras tepi total dalam 'jendela bergerak' adalah perata-rataan. Adapun dimensi 'jendela bergerak', yakni ukuran dan bentuknya, diatur oleh pengguna pada jendela input. \\fs24")
+    text <- paste0("\\qj Modul \\i QUES-B \\i0 menghitung estimasi permeabilitas suatu petak area fokal berdasarkan indeks kontras tepi total (IKTT atau \\i Total Edge Contrast Index\\i0, disingkat \\i TECI\\i0) pada tingkat sub-lanskap. Sub-lanskap ditentukan berdasarkan 'jendela bergerak' (\\i moving window\\i0) yang mengikhtisarkan indeks kontras tepi total pada area sub-lanskap yang berpusat pada setiap piksel area fokal. Pendekatan matematis yang diterapkan dalam peringkasan nilai indeks kontras tepi total dalam 'jendela bergerak' adalah perata-rataan. Adapun dimensi 'jendela bergerak', yakni ukuran dan bentuknya, diatur oleh pengguna pada jendela input. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Rentang nilai IKTT adalah nol hingga 100. Nilai IKTT nol menunjukkan kenihilan kontras antara suatu sel area fokal dengan petak-petak di sekitarnya, sedangkan nilai seratus terasosiasi dengan kondisi di mana area fokal sangat berbeda dengan piksel yang mengelilinginya (contoh: area fokal berupa kelas tutupan hutan primer yang 'dikepung' oleh area terbangun). Perlu diperhatikan bahwa tinggi rendahnya tingkat perbedaan suatu kelas tutupan lahan terhadap tutupan area fokal ditentukan berdasarkan nilai bobot kontras tepi yang dijadikan sebagai salah satu masukan modul ini (lihat bagian I). \\fs24")
+    text <- paste0("\\qj Rentang nilai IKTT adalah nol hingga 100. Nilai IKTT nol menunjukkan kenihilan kontras antara suatu sel area fokal dengan petak-petak di sekitarnya, sedangkan nilai seratus terasosiasi dengan kondisi di mana area fokal sangat berbeda dengan piksel yang mengelilinginya (contoh: area fokal berupa kelas tutupan hutan primer yang 'dikepung' oleh area terbangun). Perlu diperhatikan bahwa tinggi rendahnya tingkat perbedaan suatu kelas tutupan lahan terhadap tutupan area fokal ditentukan berdasarkan nilai bobot kontras tepi yang dijadikan sebagai salah satu masukan modul ini (lihat bagian I). ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Proses penghitungan IKTT dilakukan secara spasial sehingga dihasilkan peta yang menunjukkan distribusi nilai pada daerah studi. Satu titik waktu diwakili oleh satu peta IKTT seperti yang ditampilkan di bawah ini. Perubahan nilai IKTT yang umum teramati dalam analisis antarwaktu antara lain: penambahan, pengurangan, kemunculan, dan kelenyapan. Perubahan-perubahan tersebut merupakan dampak dari perubahan tutupan lahan suatu daerah pada suatu titik waktu ke titik waktu setelahnya terutama yang mempengaruhi luas dan distribusi area fokal dan/atau area di sekitarnya. Pemahaman lebih mendalam mengenai perubahan-perubahan IKTT serta interpretasinya terdapat pada bagian V. \\fs24")
+    text <- paste0("\\qj Proses penghitungan IKTT dilakukan secara spasial sehingga dihasilkan peta yang menunjukkan distribusi nilai pada daerah studi. Satu titik waktu diwakili oleh satu peta IKTT seperti yang ditampilkan di bawah ini. Perubahan nilai IKTT yang umum teramati dalam analisis antarwaktu antara lain: penambahan, pengurangan, kemunculan, dan kelenyapan. Perubahan-perubahan tersebut merupakan dampak dari perubahan tutupan lahan suatu daerah pada suatu titik waktu ke titik waktu setelahnya terutama yang mempengaruhi luas dan distribusi area fokal dan/atau area di sekitarnya. Pemahaman lebih mendalam mengenai perubahan-perubahan IKTT serta interpretasinya terdapat pada bagian 5. ")
     addParagraph(rtffile, text)
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-    text <- paste("\\b\\fs24 Peta Distribusi Nilai IKTT \\b0\\fs24 ",area_name_rep, " \\b\\fs24  tahun \\b0\\fs24", I_O_period_1_rep, sep="")
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    text <- paste("\\b Peta Distribusi Nilai IKTT \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_1_rep, sep="")
     addParagraph(rtffile, text)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.mw.init )
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.mw.init )
     addNewLine(rtffile, n=1)
-    text <- paste("\\b\\fs24 Peta Distribusi Nilai IKTT \\b0\\fs24 ",area_name_rep, " \\b\\fs24  tahun \\b0\\fs24", I_O_period_2_rep, sep="")
+    text <- paste("\\b Peta Distribusi Nilai IKTT \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_2_rep, sep="")
     addParagraph(rtffile, text)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, plot.mw.fin )
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.mw.fin )
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     
     #==== Report IV.  DIFA Chart ====
-    addParagraph(rtffile, chapter4)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Informasi mengenai luas dan distribusi area fokal serta nilai IKTT suatu daerah memiliki tingkat spesifisitas dan kedetilan yang tinggi. Kenyataan bahwa terdapat banyak sekali faktor lain yang perlu diperhatikan (misalnya: legalitas, ekonomi, dan sosial) dalam proses pengelolaan dan perencanaan daerah serta keberagaman tingkat pemahaman para pemangku kepentingan terkait isu habitat dan lingkungan hidup, informasi-informasi terkait kondisi area fokal perlu dikemas secara ringkas dan padat. Untuk menjawab kebutuhan tersebut, telah dikembangkan suatu indeks numerik yang disebut sebagai \\i DIFA \\i0 (singkatan dari \\i Degree of Integration of Focal Area\\i0).\\fs24")
+    addHeader(rtffile, chapter4, TOC.level = 1)
+    addNewLine(rtffile, n=1.5)
+    text <- paste0("\\qj Informasi mengenai luas dan distribusi area fokal serta nilai IKTT suatu daerah memiliki tingkat spesifisitas dan kedetilan yang tinggi. Kenyataan bahwa terdapat banyak sekali faktor lain yang perlu diperhatikan (misalnya: legalitas, ekonomi, dan sosial) dalam proses pengelolaan dan perencanaan daerah serta keberagaman tingkat pemahaman para pemangku kepentingan terkait isu habitat dan lingkungan hidup, informasi-informasi terkait kondisi area fokal perlu dikemas secara ringkas dan padat. Untuk menjawab kebutuhan tersebut, telah dikembangkan suatu indeks numerik yang disebut sebagai \\i DIFA \\i0 (singkatan dari \\i Degree of Integration of Focal Area\\i0).")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Penghitungan indeks \\i DIFA \\i0 dilakukan setelah peta nilai IKTT suatu daerah dihasilkan. Suatu mekanisme peringkasan nilai IKTT dan luasan area fokal diterapkan dengan bantuan unit pengagregasi berupa poligon-poligon persegi yang mencakup seluruh area studi. Luas area fokal dan rataan seluruh nilai IKTT dari area yang tercakup setiap persegi dihitung dan diasosiasikan dengan ID unik dari masing-masing unit pengagregasi tersebut. Kemudian, dilakukan penyusunan catatan teragregasi berdasarkan nilai IKTT dari masing-masing ID unit dari kecil ke besar. Unit-unit dengan nilai IKTT yang sama diintegrasi sehingga diperoleh luasan total area fokal yang terasosiasi dengan nilai-nilai IKTT yang ada. Angka luasan total area fokal dikonversi menjadi nilai persentase relatif terhadap luasan total area fokal pada masa ketika luasan area fokal diasumsikan utuh dan belum terpengaruhi manusia secara signifikan. Setelah itu, dibuat kurva antara nilai kumulatif persentase area fokal (sumbu y) terhadap nilai IKTT (sumbu x). Hasil pembagian luas area di bawah kurva dengan angka 100 adalah nilai \\i DIFA \\i0 daerah studi pada suatu titik waktu. \\fs24")
+    text <- paste0("\\qj Penghitungan indeks \\i DIFA \\i0 dilakukan setelah peta nilai IKTT suatu daerah dihasilkan. Suatu mekanisme peringkasan nilai IKTT dan luasan area fokal diterapkan dengan bantuan unit pengagregasi berupa poligon-poligon persegi yang mencakup seluruh area studi. Luas area fokal dan rataan seluruh nilai IKTT dari area yang tercakup setiap persegi dihitung dan diasosiasikan dengan ID unik dari masing-masing unit pengagregasi tersebut. Kemudian, dilakukan penyusunan catatan teragregasi berdasarkan nilai IKTT dari masing-masing ID unit dari kecil ke besar. Unit-unit dengan nilai IKTT yang sama diintegrasi sehingga diperoleh luasan total area fokal yang terasosiasi dengan nilai-nilai IKTT yang ada. Angka luasan total area fokal dikonversi menjadi nilai persentase relatif terhadap luasan total area fokal pada masa ketika luasan area fokal diasumsikan utuh dan belum terpengaruhi manusia secara signifikan. Setelah itu, dibuat kurva antara nilai kumulatif persentase area fokal (sumbu y) terhadap nilai IKTT (sumbu x). Hasil pembagian luas area di bawah kurva dengan angka 100 adalah nilai \\i DIFA \\i0 daerah studi pada suatu titik waktu. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Berbeda dengan nilai IKTT, peningkatan nilai \\i DIFA \\i0 mengindikasikan kondisi area fokal yang semakin ideal. Besarnya nilai \\i DIFA \\i0 dipengaruhi oleh beberapa faktor seperti: luas total, konfigurasi dan distribusi spasial area fokal pada titik waktu tertentu serta kontras area fokal dengan area di sekitarnya. Persentase total area fokal menentukan batas maksimal nilai \\i DIFA \\i0 pada suatu titik waktu, sedangkan nilai IKTT yang menunjukkan kontras area fokal dengan wilayah sekitarnya mempengaruhi kelerengan kurva kumulatif yang dihasilkan. Dengan demikian, dapat disimpulkan bahwa nilai \\i DIFA \\i0 yang tinggi berasosiasi dengan daerah berarea fokal luas dan terintegrasi. \\fs24")
+    text <- paste0("\\qj Berbeda dengan nilai IKTT, peningkatan nilai \\i DIFA \\i0 mengindikasikan kondisi area fokal yang semakin ideal. Besarnya nilai \\i DIFA \\i0 dipengaruhi oleh beberapa faktor seperti: luas total, konfigurasi dan distribusi spasial area fokal pada titik waktu tertentu serta kontras area fokal dengan area di sekitarnya. Persentase total area fokal menentukan batas maksimal nilai \\i DIFA \\i0 pada suatu titik waktu, sedangkan nilai IKTT yang menunjukkan kontras area fokal dengan wilayah sekitarnya mempengaruhi kelerengan kurva kumulatif yang dihasilkan. Dengan demikian, dapat disimpulkan bahwa nilai \\i DIFA \\i0 yang tinggi berasosiasi dengan daerah berarea fokal luas dan terintegrasi. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. \\fs24")
+    # text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. ")
+    # addParagraph(rtffile, text)
+    # addNewLine(rtffile)
+    # Dynamic text describing DIFA value change over time
+    # conditional analysis: increase or decrease of DIFA value
+    if(AUC.init < AUC.final){
+      textif1 <- "terjadi peningkatan"
+      textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
+    } else if(AUC.init > AUC.final){
+      textif1 <- "terjadi penurunan"
+      textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
+    } else{
+      textif1 <- "tidak terjadi perubahan"
+      textif2 <- ""
+    }
+    # text
+    text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. Pada tahun ", pd_1, " nilai indeks \\i DIFA \\i0 ", location, " adalah sebesar ", AUC.init, ". Dalam periode ", pd_2-pd_1, " tahun, ", textif1, " nilai \\i DIFA\\i0 ", textif2, ".")
     addParagraph(rtffile, text)
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-    text <- paste("\\b\\fs24 Kurva \\i Degree of Integration of Focal Area (DIFA)\\b0\\fs24")
+    # allowing the curve to be located in neat position on the next page
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    text <- paste("\\b Kurva \\i Degree of Integration of Focal Area (DIFA)\\b0")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=0.5)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3, res=150, grid.arrange(difa.init, difa.final, ncol=2))
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, grid.arrange(difa.init, difa.final, ncol=2))
     addNewLine(rtffile, n=1)
-    text <- paste("\\b\\fs24 Nilai Indeks \\i DIFA\\b0\\fs24")
+    text <- paste("\\b Nilai Indeks \\i DIFA\\b0")
     addParagraph(rtffile, text)
     text <- paste(I_O_period_1_rep, " : ", AUC.init, "%", "          ;    " ,I_O_period_2_rep, " : ", AUC.final, "%", sep=" ")
     addParagraph(rtffile, text)
-    addNewLine(rtffile, n=1)
+    addNewLine(rtffile, n = 0.5)
+    addNewLine(rtffile, n = 1)
     #==== Report V.  Habitat Change Analysis ====
-    addParagraph(rtffile, chapter5)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Perubahan indeks \\i DIFA \\i0 dipengaruhi oleh perubahan nilai IKTT dan luas area fokal yang terjadi dalam konteks yang sangat beragam. Pemahaman mengenai konteks-konteks tersebut dapat didekati melalui pengenalan status dan letak kawasan perencanaan tempat terjadinya perubahan nilai IKTT dan/atau luas area fokal. Seperti yang telah dituliskan sebelumnya, secara umum dinamika nilai IKTT dan luas area fokal dapat digolongkan menjadi peningkatan atau penurunan nilai IKTT serta kelenyapan dan kemunculan nilai IKTT sebagai dampak dari konversi tutupan lahan dari/menjadi kelas tutupan area fokal.\\fs24")
+    addHeader(rtffile, chapter5, TOC.level = 1)
+    addNewLine(rtffile, n=1.5)
+    text <- paste0("\\qj Perubahan indeks \\i DIFA \\i0 dipengaruhi oleh perubahan nilai IKTT dan luas area fokal yang terjadi dalam konteks yang sangat beragam. Pemahaman mengenai konteks-konteks tersebut dapat didekati melalui pengenalan status dan letak kawasan perencanaan tempat terjadinya perubahan nilai IKTT dan/atau luas area fokal. Seperti yang telah dituliskan sebelumnya, secara umum dinamika nilai IKTT dan luas area fokal dapat digolongkan menjadi peningkatan atau penurunan nilai IKTT serta kelenyapan dan kemunculan nilai IKTT sebagai dampak dari konversi tutupan lahan dari/menjadi kelas tutupan area fokal.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Di awal bagian ini ditampilkan sebuah grafik yang menunjukkan keseluruhan ID unit agregasi (lihat bagian IV) dalam koordinat kartesian berupa nilai IKTT pada titik waktu terdahulu sebagai posisi x dan IKTT pada titik waktu terkini sebagai posisi Y. Luasan lingkaran menunjukkan luas area fokal pada masing-masing unit agregasi di setiap titik waktu; setiap titik waktu diwakili oleh warna lingkaran yang berbeda. Perbedaan luas lingkaran yang berpusat pada titik yang sama mengindikasikan terjadinya perubahan luas area fokal dalam periode yang diamati. Lingkaran-lingkaran yang berada di atas garis acuan diagonal merupakan unit agregasi tempat teramatinya peningkatan nilai IKTT, sementara lingkaran yang berada di bawah garis tersebut menunjukkan fenomena sebaliknya. ID unit agregasi yang mengalami kelenyapan atau kemunculan nilai IKTT ditampilkan pada pojok atas atau kanan grafik (melampaui nilai 100), secara berurutan.\\fs24")
+    text <- paste0("\\qj Di awal bagian ini ditampilkan sebuah grafik yang menunjukkan keseluruhan ID unit agregasi (lihat bagian 4) dalam koordinat kartesian berupa nilai IKTT pada titik waktu terdahulu sebagai posisi x dan IKTT pada titik waktu terkini sebagai posisi Y. Luasan lingkaran menunjukkan luas area fokal pada masing-masing unit agregasi di setiap titik waktu; setiap titik waktu diwakili oleh warna lingkaran yang berbeda. Perbedaan luas lingkaran yang berpusat pada titik yang sama mengindikasikan terjadinya perubahan luas area fokal dalam periode yang diamati. Lingkaran-lingkaran yang berada di atas garis acuan diagonal merupakan unit agregasi tempat teramatinya peningkatan nilai IKTT, sementara lingkaran yang berada di bawah garis tersebut menunjukkan fenomena sebaliknya. ID unit agregasi yang mengalami kelenyapan atau kemunculan nilai IKTT ditampilkan pada pojok atas atau kanan grafik (melampaui nilai 100), secara berurutan.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Di bawah grafik tersebut, terdapat peta yang menampilkan poligon agregasi untuk menunjukkan letak unit-unit agregasi pada daerah studi. Dengan mencocokkan nama titik dalam grafik terhadap indeks peta, pengguna dapat memetakan perkiraan lokasi terjadinya fenomena-fenomena yang mempengaruhi nilai \\i DIFA \\i0 suatu daerah. Informasi lebih lengkap mengenai bentuk perubahan tutupan lahan yang menyebabkan perubahan nilai IKTT dan kawasan yang terasosiasi disampaikan pada sub-bagian-sub-bagian berikutnya dalam bentuk peta dan tabel.\\fs24")
+    text <- paste0("\\qj Di bawah grafik tersebut, terdapat peta yang menampilkan poligon agregasi untuk menunjukkan letak unit-unit agregasi pada daerah studi. Dengan mencocokkan nama titik dalam grafik terhadap indeks peta, pengguna dapat memetakan perkiraan lokasi terjadinya fenomena-fenomena yang mempengaruhi nilai \\i DIFA \\i0 suatu daerah. Informasi lebih lengkap mengenai bentuk perubahan tutupan lahan yang menyebabkan perubahan nilai IKTT dan kawasan yang terasosiasi disampaikan pada sub-bagian-sub-bagian berikutnya dalam bentuk peta dan tabel.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
     # summary plot
-    text <- paste("\\b\\fs24 Grafik Dinamika Nilai IKTT dan Area Fokal \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+    text <- paste("\\b Grafik Dinamika Nilai IKTT dan Area Fokal \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
     addParagraph(rtffile, text)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=5, res=150, teci_fa_dyn.plot)
-    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1.5,1,1,0.8))
-    text <- paste("\\b\\fs24 Peta Unit Agregasi \\b0\\fs24",  sep="")
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=5, res=150, teci_fa_dyn.plot)
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+    text <- paste("\\b Peta Unit Agregasi \\b0",  sep="")
     addParagraph(rtffile, text)
-    addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=5, res=150, ag_map)
+    addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=5, res=150, ag_map)
     addNewLine(rtffile, n=1)
+    subch_num <- 0
     tryCatch({
-      text <- paste("\\b\\fs24 1. Peningkatan Nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      plot.HD
+      luchg.db.degrad
+      subch_num <- subch_num + 1
+      text <- paste("\\b\\fs24 ", subch_num, ". Peningkatan Nilai IKTT \\b0\\fs24 ", gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
       addParagraph(rtffile, text)
-      addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3, res=150, plot.HD)
+      addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HD)
       addNewLine(rtffile, n=1)
-      text <- paste("\\b\\fs24 10 Perubahan Terbesar Tutupan Lahan yang Berasosiasi dengan Peningkatan Nilai IKTT\\b0\\fs24 ", sep="")
+      text <- paste("\\b 10 Tipologi Peningkatan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
       addParagraph(rtffile, text)
-      addTable(rtffile, luchg.db.degrad[1:10,])
-      # addNewLine(rtffile, n=1)
+      addTable(rtffile, id.col_rm(luchg.db.degrad[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
     }, error=function(e){cat("Melewatkan analisis peningkatan nilai IKTT:",conditionMessage(e), "\n")})
     addNewLine(rtffile, n=1)
     
     tryCatch({
       if(maxValue(chk_loss)>0) {
-        text <- paste("\\b\\fs24 2. Kelenyapan Nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+        plot.HL
+        luchg.db.loss
+        subch_num <- subch_num + 1
+        text <- paste("\\b\\fs24 ", subch_num, ". Kelenyapan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
         addParagraph(rtffile, text)
-        addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3, res=150, plot.HL)
+        addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HL)
         addNewLine(rtffile, n=1)
-        text <- paste("\\b\\fs24 10 Perubahan Terbesar Tutupan Lahan yang Berasosiasi dengan Kelenyapan Nilai IKTT\\b0\\fs24 ", sep="")
+        text <- paste("\\b 10 Tipologi Kelenyapan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
         addParagraph(rtffile, text)
-        addTable(rtffile, luchg.db.loss[1:10,])
+        addTable(rtffile, id.col_rm(luchg.db.loss[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
         # addNewLine(rtffile, n=1)
       } else { 
         print("Tidak ditemukan kelenyapan nilai IKTT")
@@ -1542,63 +1632,70 @@ for(p in 1:length(fa_class)){
     addNewLine(rtffile, n=1)
     
     tryCatch({
-      text <- paste("\\b\\fs24 3. Penurunan Nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      plot.HR
+      luchg.db.recovery
+      subch_num <- subch_num + 1
+      text <- paste("\\b\\fs24 ", subch_num, ". Penurunan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
       addParagraph(rtffile, text)
-      addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3, res=150, plot.HR)
+      addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HR)
       addNewLine(rtffile, n=1)
-      text <- paste("\\b\\fs24 10 Perubahan Terbesar Tutupan Lahan yang Berasosiasi dengan Penurunan Nilai IKTT \\b0\\fs24 ", sep="")
+      text <- paste("\\b 10 Tipologi Penurunan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
       addParagraph(rtffile, text)
-      addTable(rtffile, luchg.db.recovery[1:10,])
+      addTable(rtffile, id.col_rm(luchg.db.recovery[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
       # addNewLine(rtffile, n=1)
     }, error=function(e){cat("Melewatkan analisis penurunan nilai IKTT:",conditionMessage(e), "\n")})
     addNewLine(rtffile, n=1)
     
     tryCatch({
       if(maxValue(chk_gain)>0) {
-        text <- paste("\\b\\fs24 4. Kemunculan Nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+        plot.HG
+        luchg.db.gain
+        subch_num <- subch_num + 1
+        text <- paste("\\b\\fs24 ", subch_num, ". Kemunculan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
         addParagraph(rtffile, text)
         if (maxValue(chk_gain)>0) {
-          addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3, res=150, plot.HG)
+          addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HG)
         } else { 
           print('Melewatkan analisis kemunculan nilai IKTT') 
         }
         addNewLine(rtffile, n=1)
-        text <- paste("\\b\\fs24 10 Perubahan Terbesar Tutupan Lahan yang Berasosiasi dengan Kemunculan Nilai IKTT\\b0\\fs24 ", sep="")
+        text <- paste("\\b 10 Tipologi Kemunculan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
         addParagraph(rtffile, text)
-        addTable(rtffile, luchg.db.gain[1:10,])
+        addTable(rtffile, id.col_rm(luchg.db.gain[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
       } else {
         print("Tidak ditemukan kemunculan nilai IKTT")
       }
     }, error=function(e){cat("Melewatkan analisis kemunculan nilai IKTT:",conditionMessage(e), "\n")})
     #==== XXX Report VI.  Habitat Quality Comparison XXX ====
-    #addParagraph(rtffile, chapter6)
-    addNewLine(rtffile)
+    #addHeader(rtffile, chapter6)
+    addNewLine(rtffile, n = 0.5)
+    addNewLine(rtffile, n = 1)
     #tryCatch({
     #text <- paste("\\b\\fs20 Habitat Quality Comparison in\\b0\\fs20 ",area_name_rep, "  ", I_O_period_1_rep, "\\b\\fs20 -\\b0\\fs20 ", I_O_period_2_rep,  sep="")
     #addParagraph(rtffile, text)
-    #addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=4, res=150, grid.arrange(plot.hb.chg.init, plot.hb.chg.final, ncol=2) )
+    #addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, grid.arrange(plot.hb.chg.init, plot.hb.chg.final, ncol=2) )
     #addNewLine(rtffile, n=1)
     #addTable(rtffile, habitat.change)
     #addNewLine(rtffile, n=1)
     #},error=function(e){cat("skipping Habitat Quality Comparison analysis:",conditionMessage(e), "\n")})
     #addNewLine(rtffile, n=1)
     #==== Report VI.  TECI Zonal Statistics ====
-    addParagraph(rtffile, chapter6)
-    addNewLine(rtffile)
-    text <- paste0("\\qj\\fs24 Analisis dinamika kondisi area fokal seringkali memerlukan tindak lanjut berupa dialog dengan pemangku kepentingan, misalnya untuk perencanaan dan implementasi suatu aksi intervensi seperti restorasi atau konservasi. Identifikasi pemangku kepentingan yang paling sesuai dengan isu pengelolaan kondisi area fokal dapat dibantu dengan ketersediaan informasi mengenai profil kawasan dari waktu ke waktu. Sehubungan dengan hal tersebut, pada bagian ini ditampilkan hasil penghitungan statistika deskriptif perubahan nilai IKTT pada masing-masing kawasan pengelolaan/unit perencanaan. Informasi disajikan dalam dua tabel: tabel pertama memuat informasi mengenai kenaikan nilai IKTT sedangkan tabel berikutnya mengenai penurunan nilai IKTT. Informasi tambahan berupa perubahan luas area fokal di setiap kawasan pengelolaan turut ditampilkan untuk membantu interpretasi dinamika riil yang terjadi.\\fs24")
+    addHeader(rtffile, chapter6, TOC.level = 1)
+    addNewLine(rtffile, n=1.5)
+    text <- paste0("\\qj Analisis dinamika kondisi area fokal seringkali memerlukan tindak lanjut berupa dialog dengan pemangku kepentingan, misalnya untuk perencanaan dan implementasi suatu aksi intervensi seperti restorasi atau konservasi. Identifikasi pemangku kepentingan yang paling sesuai dengan isu pengelolaan kondisi area fokal dapat dibantu dengan ketersediaan informasi mengenai profil kawasan dari waktu ke waktu. Sehubungan dengan hal tersebut, pada bagian ini ditampilkan hasil penghitungan statistika deskriptif perubahan nilai IKTT pada masing-masing kawasan pengelolaan/unit perencanaan. Informasi disajikan dalam dua tabel: tabel pertama memuat informasi mengenai kenaikan nilai IKTT sedangkan tabel berikutnya mengenai penurunan nilai IKTT. Informasi tambahan berupa perubahan luas area fokal di setiap kawasan pengelolaan turut ditampilkan untuk membantu interpretasi dinamika riil yang terjadi.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
     tryCatch({
-      text <- paste("\\b\\fs24 Profil Unit Perencanaan: Kenaikan nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      text <- paste("\\b Profil Unit Perencanaan: Kenaikan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
-      addTable(rtffile, zstat.habitat.degradation)
+      addTable(rtffile, id.col_rm(zstat.habitat.degradation), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
       addParagraph(rtffile, "\\b\\fs20 *max, min, mean, dan sd merupakan deskripsi numerik dari peningkatan nilai IKTT\\b0\\fs20 ")
       addParagraph(rtffile, "\\b\\fs20 *foc.area atau total focal area dalam hektar\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
       
-      text <- paste("\\b\\fs24 Profil Unit Perencanaan: Penurunan nilai IKTT \\b0\\fs24 ",area_name_rep, "  \\b\\fs24 periode \\b0\\fs24", I_O_period_1_rep, "\\b\\fs24 -\\b0\\fs24 ", I_O_period_2_rep,  sep="")
+      text <- paste("\\b Profil Unit Perencanaan: Penurunan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
-      addTable(rtffile, zstat.habitat.recovery)
+      addTable(rtffile, id.col_rm(zstat.habitat.recovery), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
       addParagraph(rtffile, "\\b\\fs20 *max, min, mean, dan sd merupakan deskripsi numerik dari penurunan nilai IKTT\\b0\\fs20 ")
       addParagraph(rtffile, "\\b\\fs20 *foc.area atau total focal area dalam hektar\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
@@ -1611,10 +1708,23 @@ for(p in 1:length(fa_class)){
       dbase.preques.name<-paste("QuES_B_database_", location,'_', as.character(pd_1),'_', as.character(pd_2),'.ldbase', sep='')
       save(landuse_t1,landuse_t2, zone, cl_desc, lookup_z, t1, t2, location, mwfile.init,mwfile.final,habitat.degradation,habitat.loss.NA,habitat.gain.NA, habitat.recovery,file=dbase.preques.name)
     }, error=function(e){cat("QuES-B database production is failed, re-check your data :",conditionMessage(e), "\n")})
+    idx_QUESB <- idx_QUESB+1
   }
 }
 
-#=Writing final status message (code, message)
-statuscode<-1
-statusmessage<-"QUES-B analysis successfully completed!"
-statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+
+
+# closing routine:
+# 1. resave the quesb idx
+resave(idx_QUESB, file = proj.file)
+# 2. remove fragstat file as well as ^landuse_tna files and folders
+del_files <- list.files(quesb_dir, pattern = "^landuse_t", include.dirs = FALSE, full.names = TRUE)
+del_files <- c(del_files, paste0(quesb_dir, "/teciuf.fca"))
+for(d in 1:length(del_files)){
+  unlink(del_files[d], force = TRUE, recursive = TRUE) # recursive to delete the directory as well
+}
+# 3. remove the raster files and folders from dirname(quesb_dir)
+del_tif <- list.files(dirname(quesb_dir), pattern = ".tif$", include.dirs = FALSE, full.names = TRUE)
+for(d in 1:length(del_tif)){
+  unlink(del_tif[d], force = TRUE)
+}
