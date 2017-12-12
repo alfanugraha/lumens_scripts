@@ -165,6 +165,7 @@ time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
+
 # ==== Report 0. Cover=====
 rtffile <- RTF("PUR-Reconcile_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT

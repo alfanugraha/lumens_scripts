@@ -15,11 +15,13 @@
 ##area_name=string
 ##I_O_period_1=number 2000
 ##I_O_period_2=number 2000
+##location=string
 
 library(reshape2)
 library(ggplot2)
 library(foreign)
 library(rtf)
+library(magick)
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
@@ -459,7 +461,24 @@ chapter3<-"\\b\\fs24 2.Analysis of multiplier \\b0\\fs20"
 area_name_rep<-paste("\\b", "\\fs20", area_name, "\\b0","\\fs20")
 I_O_period_1_rep<-paste("\\b","\\fs20", I_O_period_1)
 I_O_period_2_rep<-paste("\\b","\\fs20", I_O_period_2)
-rtffile <- RTF("LUMENS_TA_report.lpr", font.size=9)
+
+# ==== Report 0. Cover=====
+rtffile <- RTF("LUMENS_TA-1_MultiIO_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+# INPUT
+img_location <- "C:/LUMENS_modified_scripts/Report/Slide3.PNG"
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul Ekonomi Regional\n\nAnalisis Deskriptif Sektor Ekonomi\n", location, ", ", "Periode ", I_O_period_1_rep, "-", I_O_period_2_rep, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+
 if (file.exists("C:/Program Files (x86)/LUMENS")){
   addPng (rtffile, "C:/Program Files (x86)/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
 } else{
