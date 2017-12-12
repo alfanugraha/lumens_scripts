@@ -117,10 +117,10 @@ unlink(list.files(pattern="*"))
 #=Set reference data
 # save as temporary data 
 setwd(project_path)
-writeOGR(admin_attribute, dsn=project_path, "ref", overwrite_layer=TRUE, driver="ESRI Shapefile")
+writeOGR(admin_attribute, dsn=project_path, "reference", overwrite_layer=TRUE, driver="ESRI Shapefile")
 # rasterizing the polygon data of reference (e.g administrative, such as district or province boundary map) using gdal_rasterize
 shp_dir<-paste(project_path,"/", "ref.shp", sep="")
-file_out<-paste(project_path, "/", "ref.tif", sep="")
+file_out<-paste(project_path, "/", "reference.tif", sep="")
 res<-spat_res
 gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
 osgeo_comm<-paste(gdalraster, shp_dir, file_out,"-a IDADM -tr", res, res, "-a_nodata 255 -ot Byte", sep=" ")
@@ -195,12 +195,12 @@ addRasterToPG<-function(project, raster.path, raster.name, raster.srid) {
   pgEnvBatchFile<-str_replace_all(string=pgEnvBatch, pattern="/", repl='\\\\')
   system(pgEnvBatchFile)
 }
-addRasterToPG(project, 'ref.tif', 'ref_map', srid)
+addRasterToPG(project, 'reference.tif', 'ref_map', srid)
 
 # unlink shapefile and raster
-file.rename("ref.tif", "base.tif")
-unlink(list.files(pattern = "ref"))
-file.rename("base.tif", "ref.tif")
+file.rename("reference.tif", "base.tif")
+unlink(list.files(pattern = "reference"))
+file.rename("base.tif", "reference.tif")
 
 # write project properties into table
 proj_descr <- as.data.frame(rbind(project, description, working_directory, location, province, country))
