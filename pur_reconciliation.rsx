@@ -166,7 +166,7 @@ time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))),
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 # ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_PUR_FINAL_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("PUR-Reconcile_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
 img_location <- "C:/LUMENS_modified_scripts/Report/Slide1.PNG"
 # loading the .png image to be edited

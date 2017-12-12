@@ -8,7 +8,7 @@
 ##PUR_rec1_shp=output vector
 ##data_attribute=output table
 ##tabel_acuan=output table
-##PUR_dbfinal=output table
+##database_unresolved_out=output table
 ##statusoutput=output table
 
 #=Load library
@@ -156,6 +156,8 @@ colnames(tabel_mapping)[3]<-ref.name
 PUR_dbmod<-merge(PUR_db, tabel_mapping, by=ref.name)
 for(j in 1:(n_pu_list)) {
   data_name<-as.character(pu_list[j,1])
+  data_value<-pu_list[j,3]
+  eval(parse(text=(paste("PUR_dbmod<-within(PUR_dbmod, {", data_name, "<-ifelse(", data_name, "!=0,",data_value,", 0)})",sep=""))))
   eval(parse(text=(paste("PUR_dbmod<-within(PUR_dbmod,{cek", j, "<-as.numeric(", data_name, "==IDS)})",sep=""))))
 }
 
