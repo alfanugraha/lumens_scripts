@@ -4,10 +4,11 @@
 ##ref_class=string
 ##ref_mapping=string
 ##pu_units=string
-##PUR_rec1=output raster
+##PUR_rec1=output raster 
 ##PUR_rec1_shp=output vector
 ##data_attribute=output table
-##database_unresolved_out=output table
+##tabel_acuan=output table
+##PUR_dbfinal=output table
 ##statusoutput=output table
 
 #=Load library
@@ -22,7 +23,7 @@ library(spatial.tools)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
-library(stringr)
+# library(stringr)
 
 #=Load active project
 load(proj.file)
@@ -67,7 +68,7 @@ colnames(tabel_mapping)[3]="IDO"
 #=Save reference table and map to temporary folder
 target_file<-paste(wd_user,"/", data_pu$LUT_NAME, ".csv", sep="")
 write.table(tabel_mapping, target_file, quote=FALSE, row.names=FALSE, sep=",")
-write.table(tabel_acuan, "hirarki_rekonsiliasi.csv", quote=FALSE, row.names=FALSE, sep=",")
+# write.table(tabel_acuan, "kelas_referensi.csv", quote=FALSE, row.names=FALSE, sep=",")
 # wd_usertemp<-paste(wd_user,"/temp", sep="")
 
 #=Prepare reference data
@@ -226,7 +227,7 @@ levels(PUR_rec1)<-merge((levels(PUR_rec1)),levels(PUR_rec2),by="ID")
 #PUR_rec3<-stack(PUR, PUR_rec1)
 
 # write PUR reconciliation phase 1 raster
-write.dbf(PUR_dbfinal, "PUR_database_final.dbf")
+write.dbf(PUR_dbfinal, "PUR-build_database.dbf")
 writeRaster(PUR_rec1, filename="PUR_reconciliation_result", format="GTiff", overwrite=TRUE)
 # convert raster to shapefile using gdal polygonize
 tif_dir<-paste(wd_user,"/PUR_reconciliation_result.tif", sep="")
@@ -323,7 +324,7 @@ time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-rtffile <- RTF("LUMENS_PUR_report_reconcile.doc", font.size=9)
+rtffile <- RTF("PUR-Build_report.doc", font.size=9)
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)

@@ -37,9 +37,9 @@ row.names(listOfData)<-NULL
 setwd(dirname(proj.file))
 
 #description
-status_country<-c("country", eval(parse(text=(paste("country")))) )
-status_province<-c("province", eval(parse(text=(paste("province")))) )
-status_location<-c("location", eval(parse(text=(paste("location")))) )
+status_country<-c("Country", eval(parse(text=(paste("country")))) )
+status_province<-c("Province", eval(parse(text=(paste("province")))) )
+status_location<-c("Location", eval(parse(text=(paste("location")))) )
 database_status<-as.data.frame(rbind(status_country, status_location, status_province))
 database_status$V1<-as.character(factor(database_status$V1))
 database_status$V2<-as.character(factor(database_status$V2))
@@ -74,13 +74,13 @@ status_PreQUES.index<-c("PreQUES", eval(parse(text=(paste("idx_PreQUES")))) )
 status_QUESB.index<-c("QUES-B", eval(parse(text=(paste("idx_QUESB")))) )
 status_QUESC.index<-c("QUES-C", eval(parse(text=(paste("idx_QUESC")))) )
 status_QUESH.index<-c("QUES-H", eval(parse(text=(paste("idx_QUESH")))) )
-status_SCIENDO1.index<-c("SCIENDO Low emission", eval(parse(text=(paste("idx_SCIENDO_led")))) )
+status_SCIENDO1.index<-c("SCIENDO Historical baseline", eval(parse(text=(paste("idx_SCIENDO_led")))) )
 status_SCIENDO2.index<-c("SCIENDO Land use simulation", eval(parse(text=(paste("idx_SCIENDO_lucm")))) )
-status_TA1.index<-c("TA Cost-benefit analysis", eval(parse(text=(paste("idx_TA_opcost")))) )
+status_TA1.index<-c("TA Opportunity cost", eval(parse(text=(paste("idx_TA_opcost")))) )
 status_TA2.index<-c("TA Regional economy", eval(parse(text=(paste("idx_TA_regeco")))) )
-status_landuse.index<-c("Land-use/cover map(s)", eval(parse(text=(paste("idx_landuse")))) )
-status_pu.index<-c("Zone map(s)", eval(parse(text=(paste("idx_pu")))) )
-status_factor.index<-c("Factor map(s)", eval(parse(text=(paste("idx_factor")))) )
+status_landuse.index<-c("Land-use/cover map", eval(parse(text=(paste("idx_landuse")))) )
+status_pu.index<-c("Planning unit map", eval(parse(text=(paste("idx_pu")))) )
+status_factor.index<-c("Factor map", eval(parse(text=(paste("idx_factor")))) )
 status_lut.index<-c("Lookup table", eval(parse(text=(paste("idx_lut")))) )
 database_status<-rbind(database_status, status_PUR.index, status_PreQUES.index,
 status_QUESB.index, status_QUESC.index, status_QUESH.index,
@@ -88,12 +88,12 @@ status_SCIENDO1.index, status_SCIENDO2.index, status_TA1.index, status_TA2.index
 status_landuse.index, status_pu.index, status_factor.index, status_lut.index)
 
 row.names(database_status)<-NULL
-colnames(database_status)[1]="Data"
+colnames(database_status)[1]="Variable"
 colnames(database_status)[2]="Value"
 
 #=Create HTML file (.html)
 setwd(dirname(proj.file))
-htmlproject<-paste("status_LUMENS_database.html", sep="")
+htmlproject<-paste("project_status.html", sep="")
 sink(htmlproject)
 cat("<!DOCTYPE html>")
 cat("<html><head><meta name='qrichtext' content='1' />")
@@ -133,7 +133,7 @@ for(row in 0:n_status){
   if (row == 0) { 
     cat(paste("<tr><th>",colnames(database_status)[1],"</th> <th>",colnames(database_status)[2],"</th></tr>"))
   } else {
-    cat(paste("<tr><td>",database_status$Data[row],"</td> <td>",database_status$Value[row],"</td></tr>"))
+    cat(paste("<tr><td>",database_status$Variable[row],"</td> <td>",database_status$Value[row],"</td></tr>"))
   }
 }
 cat("</table></body></html>")

@@ -19,8 +19,15 @@ DB <- dbConnect(
 )
 
 list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
 data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==ref_data),]
-ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==ref_data),]
+if(nrow(data_pu) != 0){
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME))   
+  col_ref_table<-ncol(ref_table)
+} else {
+  ref_table<-dbReadTable(DB, c("public", data_lut$TBL_DATA)) 
+  col_ref_table<-c(1,2)
+}
 
-col_ref_table<-ncol(ref_table)
 main_data<-subset(ref_table, select=colnames(ref_table)[col_ref_table])
