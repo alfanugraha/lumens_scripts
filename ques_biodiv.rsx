@@ -34,7 +34,7 @@ library(rgeos)
 library(zoo)
 library(RPostgreSQL)
 library(rpostgis)
-
+library(magick)
 
 proj.file= "C:/1_Testing_Data/sumsel/sumsel.lpj" 
 planning_unit="pu_IDH_48s_100m" 
@@ -1372,10 +1372,20 @@ for(p in 1:length(fa_class)){
     chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
     # ==== Report 0. Cover=====
     rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
-    addPng(rtffile, "D:/LUMENS/finalization/report_material/Slide2.PNG", width = 8.267, height = 11.692)
+    # INPUT
+    img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
+    # loading the .png image to be edited
+    cover <- image_read(img_location)
+    # to display, only requires to execute the variable name, e.g.: "> cover"
+    # adding text at the desired location
+    text_submodule <- paste("Sub-Modul Keanekaragaman Hayati\n\nAnalisis Biodiversitas Bentang Lahan\n", location, ", ", "Periode ", pd_1, "-", pd_2, sep="")
+    cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+    cover_image <- image_write(cover_image)
+    # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+    # 'location' defines the relative location of the text to the anchor defined in 'gravity'
+    # configure font type
+    addPng(rtffile, cover_image, width = 8.267, height = 11.692)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    
-    
     
     # rtffile <- RTF("LUMENS_QUES-B_report.lpr", font.size=10, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     addParagraph(rtffile, title)
