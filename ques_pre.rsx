@@ -25,6 +25,7 @@ library(stringr)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
+library(magick)
 
 analysis.option<-Analysis_option
 
@@ -599,7 +600,23 @@ I_O_period_2_rep<-paste("\\b","\\fs20", T2)
 chapter1<-"\\cf2\\b\\fs28 DATA YANG DIGUNAKAN \\cf1\\b0\\fs20"
 chapter2<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT BENTANG LAHAN \\cf1\\b0\\fs20"
 chapter3<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT UNIT PERENCANAAN \\cf1\\b0\\fs20"
-rtffile <- RTF("LUMENS_Pre-QUES_change_report.doc", font.size=9)
+# ==== Report 0. Cover=====
+rtffile <- RTF("LUMENS_Pre-QUES_change_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+# INPUT
+img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul Dinamika Tutupan Lahan\n\nAnalisis Perubahan Tutupan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)
