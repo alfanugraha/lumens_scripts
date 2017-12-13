@@ -289,7 +289,9 @@ writeRastFile <- function(raster_in, raster_ou_path = character(), cat = FALSE, 
   u_values <- u_values[order(u_values)]
   # the only difference between the continuous and discrete style is in the number of <item> under <colorrampshader>
   # writing the qml file
+  if(grepl(".tif$", raster_ou_path)){
   qml_file_conn <- file(gsub(pattern = ".tif", replacement = ".qml", x = raster_ou_path))
+  } else qml_file_conn <- file(paste0(raster_ou_path, ".qml"))
   qml_texts <- character()
   # standardized lines
   qml_texts[1] <- paste0('<!DOCTYPE qgis PUBLIC \'http://mrcc.com/qgis.dtd\' \'SYSTEM\'>')
