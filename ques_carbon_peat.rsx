@@ -584,6 +584,24 @@ if (check.peat==0) {
   #area_name_rep<-paste("\\b", "\\fs20", Location, "\\b0","\\fs20")
   line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
   rtffile <- RTF("LUMENS_QUES-C_PEAT_report.doc", font.size=9)
+  
+  # ==== Report 0. Cover=====
+  rtffile <- RTF("LUMENS_QUES-C_PEAT_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+  # INPUT
+  img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
+  # loading the .png image to be edited
+  cover <- image_read(img_location)
+  # to display, only requires to execute the variable name, e.g.: "> cover"
+  # adding text at the desired location
+  text_submodule <- paste("Sub-Modul Karbon-Gambut\n\nAnalisis Dinamika Cadangan Karbon-Gambut\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+  cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+  cover_image <- image_write(cover_image)
+  # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+  # 'location' defines the relative location of the text to the anchor defined in 'gravity'
+  # configure font type
+  addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+  addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+  
   addParagraph(rtffile, title)
   addParagraph(rtffile, sub_title)
   addNewLine(rtffile)

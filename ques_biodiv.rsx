@@ -1370,6 +1370,7 @@ for(p in 1:length(fa_class)){
     chapter4<-"\\b\\fs28 4. \\i DEGREE OF INTEGRATION OF FOCAL AREA\\i0  (\\i DIFA\\i0 )\\b0\\fs28"
     chapter5<-"\\b\\fs28 5. DINAMIKA IKTT DAN AREA FOKAL\\b0\\fs28"
     chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
+    
     # ==== Report 0. Cover=====
     rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     # INPUT

@@ -797,6 +797,7 @@ I_O_period_2_rep<-paste("\\b","\\fs20", period2)
 chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
 chapter2<-"\\b\\fs32 ANALISIS PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
 chapter3<-"\\b\\fs32 ANALISIS PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
+
 # ==== Report 0. Cover=====
 rtffile <- RTF("QUES-C_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
