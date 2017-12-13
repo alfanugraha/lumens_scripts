@@ -23,8 +23,8 @@ colnames(QUESC_list)="Database"
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
 DB <- dbConnect(
-  driver, dbname=project, host='localhost', port=5433,
-  user='postgres', password='root'
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
 )
 
 #=Retrieve all list of data that are going to be used
@@ -163,7 +163,7 @@ I_O_period_2_rep<-paste("\\b","\\fs20", period2)
 chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
 chapter2<-"\\b\\fs32 ANALISA PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
 chapter3<-"\\b\\fs32 ANALISA PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
-rtffile <- RTF("LUMENS_combined_QUESC.doc", font.size=9)
+rtffile <- RTF("QUESC_multiple_period_report.doc", font.size=9)
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)

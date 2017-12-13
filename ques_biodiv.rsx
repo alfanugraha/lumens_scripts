@@ -36,6 +36,7 @@ library(zoo)
 library(RPostgreSQL)
 library(rpostgis)
 library(magick)
+library(stringr)
 
 # proj.file= "C:/1_Testing_Data/sumsel/sumsel.lpj" 
 # planning_unit="pu_IDH_48s_100m" 
@@ -101,6 +102,10 @@ if (data_pu$RST_DATA=="ref") {
   zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
   lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
 }
+# convert periods variable into real periods
+pd_1 <- list_of_data_luc[list_of_data_luc$RST_NAME == pd_1, "PERIOD"]
+pd_2 <- list_of_data_luc[list_of_data_luc$RST_NAME == pd_2, "PERIOD"]
+pristine_pd <- list_of_data_luc[list_of_data_luc$RST_NAME == pristine_pd, "PERIOD"]
 # load the pristine state landcover map and lookup table
 prist_lcmap <- getRasterFromPG(pgconf, project, list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "RST_DATA"], paste0(list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "RST_NAME"], ".tif"))
 prist_lut <- dbReadTable(DB, c("public", list_of_data_luc[list_of_data_luc$PERIOD == pristine_pd, "LUT_NAME"]))
