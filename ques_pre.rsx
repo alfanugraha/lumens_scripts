@@ -215,7 +215,6 @@ colnames(lookup_z)[2]="COUNT_ZONE"
 colnames(lookup_z)[3]="Z_NAME"
 data_merge <- as.data.frame(merge(data_merge,lookup_z,by="ZONE"))
 data_merge$COUNT<-data_merge$COUNT*Spat_res
-  
 colnames(lookup_l)<-c("ID", "CLASS")
 colnames(lookup_z)<-c("ID", "COUNT_ZONE", "ZONE")
 area_zone<-lookup_z
@@ -305,6 +304,8 @@ for(m in 2:idx_landuse){
     sub<-paste(sub,"_ha", sep="")
     eval(parse(text=(paste("colnames(Ov_chg)[", m+2, ']="', sub, '"', sep=""))))
     c.name<-c(c.name,sub)
+  } else {
+    eval(parse(text=(paste("Period<-period", m,"-period", m-1, sep=""))))
   }
 }
 # calculate in rate per year and unit of hectare  
@@ -517,7 +518,7 @@ if(analysis.option==2 | analysis.option==0){
   # write.dbf(alpha_beta_database, "Pre_QUES_IO_table.dbf")
 } else { print("Alpha-beta analysis is skipped") }
 
-#=Create Pre-QUES Change Report (.doc)
+#=Create Pre-QUES Change Report (.lpr)
 # create maps for report
 # arrange numerous colors with RColorBrewer
 myColors1 <- brewer.pal(9,"Set1")
@@ -600,16 +601,17 @@ I_O_period_2_rep<-paste("\\b","\\fs20", T2)
 chapter1<-"\\cf2\\b\\fs28 DATA YANG DIGUNAKAN \\cf1\\b0\\fs20"
 chapter2<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT BENTANG LAHAN \\cf1\\b0\\fs20"
 chapter3<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT UNIT PERENCANAAN \\cf1\\b0\\fs20"
+rtffile <- RTF("Pre-QUES_change_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+file.copy(paste0(LUMENS_path, "/ques_cover.png"), result_dir, recursive = FALSE)
+file.copy(paste0(LUMENS_path, "/ques_line.png"), result_dir, recursive = FALSE)
+img_location<-paste0(result_dir, "/ques_cover.png")
+line_location<-paste0(result_dir, "/ques_line.png")
 
-# ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_Pre-QUES_change_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
-# INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul Dinamika Tutupan Lahan\n\nAnalisis Perubahan Tutupan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+text_submodule <- paste("Sub-Modul Perubahan Penggunaan Lahan\n\nAnalisis Perubahan Penggunaan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -641,26 +643,26 @@ addNewLine(rtffile)
 addParagraph(rtffile, title1)
 addParagraph(rtffile, title2)
 addNewLine(rtffile)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addNewLine(rtffile)
 width<-as.vector(c(1.34,3.1))
 addTable(rtffile,proj_descr,font.size=8,col.widths=width)
 addPageBreak(rtffile)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 8.267, height = 0.1)
 #addParagraph(rtffile, date)
 addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addNewLine(rtffile)
 addParagraph(rtffile, "Analisa perubahan tutupan lahan dilakukan untuk mengetahui kecenderungan perubahan tutupan lahan di suatu daerah pada satu kurun waktu. Analisa ini dilakukan dengan menggunakan data peta tutupan lahan pada dua periode waktu yang berbeda. Selain itu, dengan memasukkan data unit perencanaan kedalam proses analisa, dapat diketahui kecenderungan perubahan tutupan lahan pada masing-masing kelas unit perencanaan yang ada. Informasi yang dihasilkan melalui analisa ini dapat digunakan dalam proses perencanaan untuk berbagai hal. Diantaranya adalah: menentukan prioritas pembangunan, mengetahui faktor pemicu perubahan penggunaan lahan, merencanakan skenario pembangunan di masa yang akan datang, dan lain sebagainya.")
 addNewLine(rtffile)
 addParagraph(rtffile, chapter1)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addNewLine(rtffile)
 addParagraph(rtffile, "Data yang digunakan dalam analisa ini adalah data peta penggunaan lahan dan data peta unit perencanaan daerah. Data pendukung yang digunakan adalah peta acuan tipe penggunaan lahan dan data acuan kelas unit perencanaan")
 addNewLine(rtffile)
@@ -684,7 +686,7 @@ addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150, plot.Z)
 addNewLine(rtffile)
 addParagraph(rtffile, chapter2)
-addParagraph(rtffile, line)
+#addPng(rtffile, line_location, width = 18.267, height = 0.3)
 addNewLine(rtffile)
 addParagraph(rtffile, "Pada bagian ini disajikan hasil analisa perubahan penggunaan lahan untuk keseluruhan bentang lahan yang dianalisa. Beberapa bentuk analisa yang dilakukan antara lain: perbandingan luasan tutupan lahan pada periode analisa dan tipe perubahan lahan dominan pada bentang lahan yang dianalisa")
 addNewLine(rtffile)
@@ -720,7 +722,7 @@ addNewLine(rtffile)
 # land use dominant changes report
 if(analysis.option==1 | analysis.option==0){
   addParagraph(rtffile, chapter3)
-  addParagraph(rtffile, line)
+  #addPng(rtffile, line_location, width = 8.267, height = 0.1)
   addNewLine(rtffile)
   addParagraph(rtffile, "Pada bagian ini disajikan hasil analisa perubahan penggunaan lahan untuk masing-masing kelas unit perencanaan yang dianalisa. Beberapa bentuk analisa yang dilakukan antara lain: perbandingan luasan tutupan lahan pada periode analisa dan tipe perubahan lahan dominan pada unit perencanaan yang dianalisa")
   addNewLine(rtffile)
@@ -823,31 +825,31 @@ if(analysis.option==3 | analysis.option==0){
   
   lu_class<-c(1,2,3,4,5,6,7,8)
   lu_class<-as.data.frame(lu_class)
-  lu_class$Classified<-c("Hutan primer", "Hutan sekunder", "Tanaman pohon monokultur", "Tanaman pohon campuran", "Tanaman pertanian semusim", "Semak, rumput dan lahan terbuka", "Pemukiman", "Lain-lain")
+  lu_class$Classified<-c("Undisturbed forest", "Logged-over forest", "Monoculture tree-based plantation", "Mixed tree-based plantation", "Agriculture/annual crop", "Shrub, grass, and cleared land", "Settlement and built-up area", "Others")
   
   # create trajectories database
   freq1<-subset(area_lc1, select=c('ID', 'CLASS_LC1', 'Classified1'))
   freq2<-subset(area_lc2, select=c('ID', 'CLASS_LC2', 'Classified2'))
   colnames(freq1)[3]<-"Classified"
   colnames(freq2)[3]<-"Classified"
-  freq1<-merge(freq1, lu_class, by="Classified")
-  freq2<-merge(freq2, lu_class, by="Classified")
+  freq1<-merge(freq1, lu_class, by="Classified", all = TRUE)
+  freq2<-merge(freq2, lu_class, by="Classified", all = TRUE)
   freq1<-subset(freq1, select=c('ID', 'CLASS_LC1', 'lu_class'))
   freq2<-subset(freq2, select=c('ID', 'CLASS_LC2', 'lu_class'))
   colnames(freq1)[1]="ID_LC1"
   colnames(freq1)[2]="CLASS1"
   colnames(freq1)[3]="ID_L1"
-  data_merge_tr<-as.data.frame(merge(data_merge, freq1, by="ID_LC1"))
+  data_merge_tr<-as.data.frame(merge(data_merge, freq1, by="ID_LC1", all = TRUE))
   colnames(freq2)[1]="ID_LC2"
   colnames(freq2)[2]="CLASS2"
   colnames(freq2)[3]="ID_L2"
-  data_merge_tr<-as.data.frame(merge(data_merge_tr, freq2, by="ID_LC2"))
+  data_merge_tr<-as.data.frame(merge(data_merge_tr, freq2, by="ID_LC2", all = TRUE))
   data_merge_tr$CLASS1<-data_merge_tr$CLASS2<-NULL
   data_merge_tr$T1<-data_merge_tr$ID_L1*10
   data_merge_tr$T2<-data_merge_tr$ID_L2
   data_merge_tr$TR<-data_merge_tr$T1+data_merge_tr$T2
   colnames(lookup_traj)[1]="TR"
-  PreQUES_traj_database<-as.data.frame(merge(data_merge_tr,lookup_traj, by="TR"))
+  PreQUES_traj_database<-as.data.frame(merge(data_merge_tr,lookup_traj, by="TR", all = TRUE))
   PreQUES_traj_database$Traj_Code<-toupper(abbreviate(PreQUES_traj_database$Traj))
   
   #cross_temp<-data.frame(Var1=PreQUES_traj_database$ID_LC1, Var2=PreQUES_traj_database$ID_LC2, Var3=PreQUES_traj_database$ZONE, Freq=PreQUES_traj_database$COUNT)
@@ -982,19 +984,19 @@ if(analysis.option==3 | analysis.option==0){
   landuse_tr1<-ratify(landuse_tr1,count=TRUE,overwrite=TRUE)
   landuse_tr2<-ratify(landuse_tr2,count=TRUE,overwrite=TRUE)
   colnames(freq1)[1]="ID"
-  levels(landuse_tr1)<-merge((levels(landuse_tr1)), freq1, by="ID")
+  levels(landuse_tr1)<-merge((levels(landuse_tr1)), freq1, by="ID", all = TRUE)
   colnames(freq2)[1]="ID"
-  levels(landuse_tr2)<-merge((levels(landuse_tr2)), freq2, by="ID")
+  levels(landuse_tr2)<-merge((levels(landuse_tr2)), freq2, by="ID", all = TRUE)
   landuse_tr1<-deratify(landuse_tr1, 'ID_L1')
   landuse_tr2<-deratify(landuse_tr2, 'ID_L2')
   lu_trajectories<-overlay(landuse_tr1, landuse_tr2, fun=function(x,y){return((x*10)+y)})
   lu_trajectories<-ratify(lu_trajectories, count=TRUE, overwrite=TRUE)
   colnames(name_traj)[1]="ID"
-  levels(lu_trajectories)<-merge((levels(lu_trajectories)),name_traj,by='ID')
+  levels(lu_trajectories)<-merge((levels(lu_trajectories)),name_traj,by='ID', all = TRUE)
   lu_trajectories_final<-deratify(lu_trajectories,'ID_trf')
   lu_trajectories_final<-ratify(lu_trajectories_final, count=TRUE, overwrite=TRUE)
   colnames(leg_traj)[1]="ID"
-  levels(lu_trajectories_final)<-merge((levels(lu_trajectories_final)),leg_traj,by='ID')
+  levels(lu_trajectories_final)<-merge((levels(lu_trajectories_final)),leg_traj,by='ID', all = TRUE)
   
   #calculate summary statistics by zone and overall
   PreQUES_traj_database.melt <- melt(data = PreQUES_traj_database, id.vars=c('Z_NAME','Traj', 'Traj_Code'), measure.vars=c('COUNT'))
@@ -1089,7 +1091,25 @@ if(analysis.option==3 | analysis.option==0){
   #command<-paste("resave(", newTraj, ",", newTrajsum, ",",newTrajz,",",newTrajmap, ",", sep="")
   
   #write report
-  rtffile <- RTF("LUMENS_Pre-QUES_Trajectory_report.doc", font.size=9)
+  rtffile <- RTF("Pre-QUES_Trajectory_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+  file.copy(paste0(LUMENS_path, "/ques_cover.png"), result_dir, recursive = FALSE)
+  file.copy(paste0(LUMENS_path, "/ques_line.png"), result_dir, recursive = FALSE)
+  img_location<-paste0(result_dir, "/ques_cover.png")
+  line_location<-paste0(result_dir, "/ques_line.png")
+  
+  # loading the .png image to be edited
+  cover <- image_read(img_location)
+  # to display, only requires to execute the variable name, e.g.: "> cover"
+  # adding text at the desired location
+  text_submodule <- paste("Sub-Modul Perubahan Penggunaan Lahan\n\nAnalisis Alur Penggunaan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+  cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+  cover_image <- image_write(cover_image)
+  # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+  # 'location' defines the relative location of the text to the anchor defined in 'gravity'
+  # configure font type
+  addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+  addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+  
   title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
   title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Land Use Trajectory Analysis ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
   sub_title<-"\\cf2\\b\\fs32 ANALISA ALUR PENGGUNAAN LAHAN\\cf1\\b0\\fs20"
@@ -1122,17 +1142,17 @@ if(analysis.option==3 | analysis.option==0){
   addParagraph(rtffile, title1)
   addParagraph(rtffile, title2)
   addNewLine(rtffile)
-  addParagraph(rtffile, line)
+  addPng(rtffile, line_location)
   addParagraph(rtffile, time_start)
   addParagraph(rtffile, time_end)
-  addParagraph(rtffile, line)
+  addPng(rtffile, line_location)
   addNewLine(rtffile)
   width<-as.vector(c(1.34,3.1))
   addTable(rtffile,proj_descr,font.size=8,col.widths=width)
   addPageBreak(rtffile)
   addParagraph(rtffile, sub_title)
   addNewLine(rtffile)
-  addParagraph(rtffile, line)
+  addPng(rtffile, line_location)
   
   #addParagraph(rtffile, date)
   addNewLine(rtffile)
@@ -1140,7 +1160,7 @@ if(analysis.option==3 | analysis.option==0){
   addNewLine(rtffile)
   addParagraph(rtffile, paste("\\b \\fs24 ALUR PERUBAHAN PENGGUNAAN LAHAN\\b0 \\fs24", sep=""))
   addNewLine(rtffile)
-  addParagraph(rtffile, line)
+  addPng(rtffile, line_location)
   addNewLine(rtffile)
   addParagraph(rtffile, "Alur perubahan penggunaan lahan merupakan ringkasan keseluruhan tipe rangkaian perubahan penggunaan lahan yang mungkin terjadi di sebuah daerah. Kategori besar dari alur perubahan lahan dibagi menjadi dua jenis yaitu Loss of tree cover dan recovery of tree cover")
   addNewLine(rtffile)
@@ -1181,7 +1201,7 @@ if(analysis.option==3 | analysis.option==0){
   addNewLine(rtffile)
   addParagraph(rtffile, paste("\\b \\fs24 PERUBAHAN TUTUPAN HUTAN\\b0 \\fs24", sep=""))
   addNewLine(rtffile)
-  addParagraph(rtffile, line)
+  addPng(rtffile, line_location)
   addNewLine(rtffile)
   addParagraph(rtffile, "Salah satu bentuk alur perubahan penggunaan lahan yang paling banyak mendapatkan perhatian adalah alur perubahan hutan alam menjadi tipe tutupan lahan lainnya (deforestasi) dan perubahan hutan alam primer menjadi hutan alam sekunder (degradasi). Bagian ini memperlihatkan hasil analisa LUMENS terhadap perubahan tutupan hutan di sebuah daerah")
   addNewLine(rtffile)
@@ -1240,8 +1260,10 @@ if(analysis.option==3 | analysis.option==0){
 unlink(list.files(pattern = ".tif"))
 unlink(list.files(pattern = ".grd"))
 unlink(list.files(pattern = ".gri"))
+unlink(list.files(pattern = ".png"))
 
-# command2<-paste("start ", "winword ", result_dir, "/LUMENS_Pre-QUES_change_report.doc", sep="" )
+
+# command2<-paste("start ", "winword ", result_dir, "/LUMENS_Pre-QUES_change_report.lpr", sep="" )
 # shell(command2)
 
 #CLEAN ENVIRONMENT
