@@ -10,6 +10,7 @@
 ##window.shape=selection Bujur sangkar; Lingkaran
 ##windowsize=number 1000
 ##gridres=number 10000
+##resultoutput = output table
 ##statusoutput=output table
 
 # loading required packages====
@@ -36,19 +37,21 @@ library(RPostgreSQL)
 library(rpostgis)
 library(magick)
 
-proj.file= "C:/1_Testing_Data/sumsel/sumsel.lpj" 
-planning_unit="pu_IDH_48s_100m" 
-gridres= 10000 
-windowsize= 1000
-window.shape= 1 
-raster.nodata= 0
-pd_1 = 'lc2000'
-pd_2 = 'lc2005'
-pristine_pd = 'lc1990' 
-edgecon = "contrast_table_lut" 
-focal_coverage = "c:/1_Testing_Data/#LUMENS_finaltesting/3_Tabular/focal.csv" 
+# proj.file= "C:/1_Testing_Data/sumsel/sumsel.lpj" 
+# planning_unit="pu_IDH_48s_100m" 
+# gridres= 10000 
+# windowsize= 1000
+# window.shape= 1 
+# raster.nodata= 0
+# pd_1 = 'lc2000'
+# pd_2 = 'lc2005'
+# pristine_pd = 'lc1990' 
+# edgecon = "contrast_table_lut" 
+# focal_coverage = "c:/1_Testing_Data/#LUMENS_finaltesting/3_Tabular/focal.csv" 
 
-user_doc <- Sys.getenv("USERPROFILE") # in case the create_db script has not been modified to save user_doc variable
+# blanko for resultoutput
+resultoutput <- character()
+
 
 # INPUT reading process
 focal_coverage <- read.csv(focal_coverage, header=FALSE, sep=",")
@@ -58,7 +61,6 @@ focal_coverage <- as.numeric(focal_coverage[,1])
 load(proj.file) # loading the project file
 # Static parameters and variables
 time_start <- format(Sys.time())
-# fca_dir <- user_doc # directory in which the .fca file is located during the installation user_doc = Sys.getenv("USERPROFILE")
 # setting up the connection with the PostGre database system
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
@@ -429,7 +431,17 @@ teci.analysis<-function(landuse, lu_path){
 }
 
 saveTECI<-function(mwfile, location, period){
-  file.teci<-paste('TECI_',location,'_',period,'_NA.tif',sep='')
+  file.teci<-paste('TECI_',location,'_',period,'.tif',sep='')
+  # add new record in list_of_data_f
+  teci.r_dbname <- paste0("teci", fa_class[p], "_", period)
+  idx_factor <- idx_factor + 1
+  list_of_data_f <- rbind(list_of_data_f, data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = teci.r_dbname, stringsAsFactors = FALSE))
+  dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
+  # update the list_of_data_f in 'LUMENS_path_user'
+  write.csv(list_of_data_f, paste0(LUMENS_path_user, "/list_of_data_f.csv"), row.names = FALSE)
+  # add teci map into the postgre database
+  addRasterToPG(project, paste0(teci.r_dbname, ".tif"), paste0("factor", idx_factor), srid)
+  # write the raster file in targeted directory as well as the .qml for value visualization
   tc_pal <- c("#62D849", "#0000f5", "#6B54D3")
   writeRastFile(mwfile, file.teci, colorpal = tc_pal)
   return(print(paste(file.teci, "has been written")))
@@ -503,7 +515,7 @@ generateDIFAtable<-function(mwfile, tothab, location, period, sampling.grid){
   sumtab1_fin[nrow(sumtab1_fin)+1,] <- c(100, 100, sumtab1_fin[nrow(sumtab1_fin),'Cum.Sum'])
   # sumtab1<-round(sumtab1,digits=2)
   colnames(sumtab1)<-c("ID.grid","Habitat Area(%)","X.cor","Y.cor","ID.x", "ID.y", "IDx.grid", "TECI(%)", "Cumulative Habitat(%)")
-  nama.tabel.teci<-paste("QUES-B_DIFA_Table_", location,"_", period, ".csv", sep='')
+  nama.tabel.teci<-paste("DIFA_", location,"_", period, ".csv", sep='')
   write.table(sumtab1, nama.tabel.teci, row.names = FALSE, sep=",")
   return (sumtab1_fin)
 }
@@ -532,10 +544,12 @@ subsequent.changes<-function(habitat.analysis,lu_db, analysis, location, T1, T2)
   luchg.analysis.att$AREA_HA <- luchg.analysis.att$COUNT * Spat_res
   luchg.analysis.att <- luchg.analysis.att[,c("Z_NAME", "LUCHG", "AREA_HA")]
   names(luchg.analysis.att) <- c("Unit Perencanaan", "Perubahan Tutupan", "Luas") # INDO ver
+  luchg.analysis.att_file <- luchg.analysis.att
+  luchg.analysis.att_file$Analysis <- analysis
   setwd(quesb_folder)
   tryCatch({
     luchg.db.filename<-paste("LUCHG_",analysis,"_database",location,'_', T1,'_',T2,'.dbf', sep='')
-    write.dbf(luchg.analysis.att, luchg.db.filename)
+    write.dbf(luchg.analysis.att_file, luchg.db.filename)
   },error=function(e){cat("Skipping database export process :",conditionMessage(e), "\n")})
   return(luchg.analysis.att)
 }
@@ -558,8 +572,8 @@ zonal_stat<-function(habitat.change, zone, lookup_z){
 # plotting draft for the "semi-interactive" plot
 TECI_chg <- function(T1,T2){
   # 1. load the csv of the QUES-B_DIFA_Table_SouthSumatra_2000.csv and the time period following
-  raw_difa_tab.init <- read.csv(paste0(quesb_folder, "/QUES-B_DIFA_Table_", location, "_", T1, ".csv"), stringsAsFactors = FALSE)
-  raw_difa_tab.final <- read.csv(paste0(quesb_folder, "/QUES-B_DIFA_Table_", location, "_", T2, ".csv"), stringsAsFactors = FALSE)
+  raw_difa_tab.init <- read.csv(paste0(quesb_folder, "/DIFA_", location, "_", T1, ".csv"), stringsAsFactors = FALSE)
+  raw_difa_tab.final <- read.csv(paste0(quesb_folder, "/DIFA_", location, "_", T2, ".csv"), stringsAsFactors = FALSE)
   # 2. list the IDx.grid s of the from the two tables
   compiled_difa <- unique(c(raw_difa_tab.init$IDx.grid, raw_difa_tab.final$IDx.grid))
   compiled_difa <- compiled_difa[order(compiled_difa)]
@@ -667,9 +681,9 @@ grid_map <- function(T1, T2){
   brk_y <- brk_y[order(brk_y, decreasing = TRUE)]
   
   # input table
-  raw_difa_tab.init <- read.csv(paste0(quesb_folder, "/QUES-B_DIFA_Table_", location, "_", T1, ".csv"), stringsAsFactors = FALSE)
+  raw_difa_tab.init <- read.csv(paste0(quesb_folder, "/DIFA_", location, "_", T1, ".csv"), stringsAsFactors = FALSE)
   raw_difa_tab.init <- raw_difa_tab.init[,c("ID.x", "ID.y")]
-  raw_difa_tab.final <- read.csv(paste0(quesb_folder, "/QUES-B_DIFA_Table_", location, "_", T2, ".csv"), stringsAsFactors = FALSE)
+  raw_difa_tab.final <- read.csv(paste0(quesb_folder, "/DIFA_", location, "_", T2, ".csv"), stringsAsFactors = FALSE)
   raw_difa_tab.final <- raw_difa_tab.final[,c("ID.x", "ID.y")]
   # 
   c_grid <- data.frame(unique(rbind(raw_difa_tab.init, raw_difa_tab.final)), stringsAsFactors = FALSE)
@@ -726,7 +740,7 @@ for(p in 1:length(fa_class)){
   dir.create(result_dir)
   setwd(result_dir)
   for(k in 1:(length(bperiod)-1)){
-    quesb_folder<-paste(result_dir,"/QuES-B_analysis_", fa_class[p], "_" , as.character(pd_1), "_", as.character(pd_2),sep="")
+    quesb_folder<-paste(result_dir,"/QuES-B_", fa_class[p], "_" , as.character(pd_1), "_", as.character(pd_2),sep="")
     dir.create(quesb_folder)
     #====I Sampling grid raster preparation====
     #Initial raster sampling grid
@@ -792,14 +806,16 @@ for(p in 1:length(fa_class)){
     
     #save TECI file
     saveTECI(mwfile.init, location, as.character(pd_1))
+    idx_factor <- idx_factor+1
     saveTECI(mwfile.final, location, as.character(pd_2))
-    
+    idx_factor <- idx_factor+1
     saveFocal(foc.area.init, location, as.character(pd_1))
     saveFocal(foc.area.final, location, as.character(pd_2))
     
     difa.table.init<-generateDIFAtable(mwfile.init, tothab.init, location, as.character(pd_1), sampling.grid = sample_grid)
+    idx_lut <- idx_lut+1
     difa.table.final<-generateDIFAtable(mwfile.final, tothab.final, location, as.character(pd_2), sampling.grid = sample_grid)
-    
+    idx_lut <- idx_lut+1
     #DIFA Chart Initial
     difa.init<-ggplot(difa.table.init, aes(x =difa.table.init$teci, y =difa.table.init$Cum.Sum, xend=100, yend=100)) +
       geom_area() + ggtitle(paste(location, as.character(pd_1))) +
@@ -845,7 +861,7 @@ for(p in 1:length(fa_class)){
     
     col.init<-paste('class.stats.', as.character(pd_1), sep='')
     colnames(foc.area.stats)<-c(paste('class.stats.', as.character(pd_1), sep=''),paste('class.stats.', as.character(pd_2), sep=''))
-    foc.area.stats.filename<-paste("Focal_area_class_metrics",location,'_', as.character(pd_1),'_', as.character(pd_2),'.csv', sep='')
+    foc.area.stats.filename<-paste("Landscape_metrics",location,'_', as.character(pd_1),'_', as.character(pd_2),'.csv', sep='')
     write.csv(foc.area.stats, foc.area.stats.filename, row.names=TRUE)
     
     #Focal area decrement and increment
@@ -1189,6 +1205,28 @@ for(p in 1:length(fa_class)){
       tryCatch({
         luchg.db.gain<-subsequent.changes(habitat.gain.NA,lu_db, "Gain", location, as.character(pd_1), as.character(pd_2))
       }, error=function(e){cat("Skipping habitat gain analysis:",conditionMessage(e), "\n")})
+      
+      # merge the subsequent.changes results as single table
+      # read the table
+      qb_an.files <- list.files(pattern = "^LUCHG.*\\.dbf$", recursive = FALSE)
+      # loop to merge into QUESBdatabase and delete the other components
+      for(q in 1:length(qb_an.files)){
+        if(q ==1) qb_merge.tab <- data.frame(read.dbf(qb_an.files[q]), stringsAsFactors = FALSE) else{
+          qb_merge.tab <- rbind(qb_merge.tab, data.frame(read.dbf(qb_an.files[q]), stringsAsFactors = FALSE))
+          if(q == length(qb_an.files)){
+            # save as .dbf file
+            write.dbf(qb_merge.tab, paste0("QUESBdatabase_", location, "_", pd_1, "-", pd_2, ".dbf"))
+            unlink(qb_an.files, force = TRUE)
+            # save into the postgre
+            idx_lut <- idx_lut+1
+            dbWriteTable(DB, paste0("in_lut", idx_lut), qb_merge.tab, append=TRUE, row.names=FALSE)
+            # update the list_of_data_lut both in LUMENS_path_user as well as in postgre
+            list_of_data_lut <- rbind(list_of_data_lut, data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("QBdb_", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE))
+            dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+            write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
+          }
+        }
+      }
     }
     # preprocessing the mapping process
     # 1. polygonize the background raster
@@ -1372,7 +1410,7 @@ for(p in 1:length(fa_class)){
     chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
     
     # ==== Report 0. Cover=====
-    rtffile <- RTF("LUMENS_QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+    rtffile <- RTF("QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     # INPUT
     img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
     # loading the .png image to be edited
@@ -1713,13 +1751,23 @@ for(p in 1:length(fa_class)){
     }, error=function(e){cat("Melewatkan analisis profil unit perencanaan:",conditionMessage(e), "\n")})
     addNewLine(rtffile, n=1)
     done(rtffile)
+    # saving rtffile into .lpj
+    eval(parse(text=paste0("rtf_", fa_class[p], "_", planning_unit, "_", pd_1, "_", pd_2, " <- rtffile")))
+    eval(parse(text = paste0("resave(rtf_", fa_class[p], "_", planning_unit, "_", pd_1, "_", pd_2, ", file = proj.file)")))
+    # delete the .csv version of the DIFA_location located in quesb_folder as well as ^landuse_tna files and folders
+    del_files <- list.files(path = quesb_folder, pattern = "^DIFA.*\\.csv$", recursive = FALSE, full.names = TRUE)
+    for(d in 1:length(del_files)){
+      unlink(del_files[d], force = TRUE, recursive = TRUE) # recursive to delete the directory as well
+    }
+    # saving summary results and parameters as .RData
     t1 <- as.character(pd_1)
     t2 <- as.character(pd_2)
     tryCatch({
       dbase.preques.name<-paste("QuES_B_database_", location,'_', as.character(pd_1),'_', as.character(pd_2),'.ldbase', sep='')
       save(landuse_t1,landuse_t2, zone, cl_desc, lookup_z, t1, t2, location, mwfile.init,mwfile.final,habitat.degradation,habitat.loss.NA,habitat.gain.NA, habitat.recovery,file=dbase.preques.name)
     }, error=function(e){cat("QuES-B database production is failed, re-check your data :",conditionMessage(e), "\n")})
-    idx_QUESB <- idx_QUESB+1
+    # updating resultoutput vector
+    resultoutput <- c(resultoutput, paste0(quesb_folder, "/TECI_", location, "_", pd_1, ".tif"), paste0(quesb_folder, "/TECI_", location, "_", pd_2, ".tif"), paste0(quesb_folder, "/QUESBdatabase_", location, "_", pd_1, "-", pd_2, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"))
   }
 }
 
@@ -1727,10 +1775,11 @@ for(p in 1:length(fa_class)){
 
 # closing routine:
 # 1. resave the quesb idx
+idx_QUESB <- idx_QUESB+1
 resave(idx_QUESB, file = proj.file)
-# 2. remove fragstat file as well as ^landuse_tna files and folders
-del_files <- list.files(quesb_dir, pattern = "^landuse_t", include.dirs = FALSE, full.names = TRUE)
-del_files <- c(del_files, paste0(quesb_dir, "/teciuf.fca"))
+# 2. remove fragstat file 
+del_files <- paste0(quesb_dir, "/teciuf.fca")
+del_files <- c(del_files, list.files(quesb_dir, pattern = "^landuse_t", include.dirs = FALSE, full.names = TRUE))
 for(d in 1:length(del_files)){
   unlink(del_files[d], force = TRUE, recursive = TRUE) # recursive to delete the directory as well
 }
@@ -1739,3 +1788,5 @@ del_tif <- list.files(dirname(quesb_dir), pattern = ".tif$", include.dirs = FALS
 for(d in 1:length(del_tif)){
   unlink(del_tif[d], force = TRUE)
 }
+# 4. convert the resultoutput vector into data.frame
+resultoutput <- data.frame(PATH = resultoutput, stringsAsFactors = FALSE)
