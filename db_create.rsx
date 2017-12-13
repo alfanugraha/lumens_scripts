@@ -122,7 +122,7 @@ writeOGR(admin_attribute, dsn=project_path, "reference", overwrite_layer=TRUE, d
 shp_dir<-paste(project_path,"/", "reference.shp", sep="")
 file_out<-paste(project_path, "/", "reference.tif", sep="")
 res<-spat_res
-gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
+gdalraster<-paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\"")
 osgeo_comm<-paste(gdalraster, shp_dir, file_out,"-a IDADM -tr", res, res, "-a_nodata 255 -ot Byte", sep=" ")
 system(osgeo_comm)
 
