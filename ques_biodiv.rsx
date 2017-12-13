@@ -80,12 +80,12 @@ list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
 #=Set initial variables
 # reference map
 ref.obj<-exists('ref')
-ref.path<-paste(dirname(proj.file), '/ref.tif', sep='')
+ref.path<-paste(dirname(proj.file), '/reference.tif', sep='')
 if(!ref.obj){
   if(file.exists(ref.path)){
     ref<-raster(ref.path)
   } else {
-    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
+    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'reference.tif')
   }
 }
 # planning unit
