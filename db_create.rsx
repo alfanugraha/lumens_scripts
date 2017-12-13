@@ -119,7 +119,7 @@ unlink(list.files(pattern="*"))
 setwd(project_path)
 writeOGR(admin_attribute, dsn=project_path, "reference", overwrite_layer=TRUE, driver="ESRI Shapefile")
 # rasterizing the polygon data of reference (e.g administrative, such as district or province boundary map) using gdal_rasterize
-shp_dir<-paste(project_path,"/", "ref.shp", sep="")
+shp_dir<-paste(project_path,"/", "reference.shp", sep="")
 file_out<-paste(project_path, "/", "reference.tif", sep="")
 res<-spat_res
 gdalraster<-(paste0("\"", LUMENS_path, "\\bin\\gdal_rasterize.exe\""))
