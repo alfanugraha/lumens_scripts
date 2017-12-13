@@ -5,6 +5,10 @@
 ##planning_unit=string
 ##lookup_c=string
 ##raster.nodata=number 0
+#include_peat=selection Yes;No
+#peatmap=string
+#lookup_c_peat=string
+##resultoutput=output table
 ##statusoutput=output table
 
 #=Load library
@@ -59,7 +63,7 @@ T1<-data_luc1$PERIOD
 T2<-data_luc2$PERIOD
 
 #=Set Working Directory
-pu_name<-data_pu$RST_NAME 
+pu_name<-data_pu$RST_DATA 
 idx_QUESC<-idx_QUESC+1
 dirQUESC<-paste(dirname(proj.file), "/QUES/QUES-C/", idx_QUESC, "_QUESC_", T1, "_", T2, "_", pu_name, sep="")
 dir.create(dirQUESC, mode="0777")
@@ -78,6 +82,12 @@ if(!ref.obj){
   } else {
     ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
   }
+}
+# peat
+if (include_peat == 1){
+  data_peat<-list_of_data_pu[which(list_of_data_pu$RST_NAME==peatmap),]
+  peat<-getRasterFromPG(pgconf, project, data_peat$RST_DATA, paste(data_peat$RST_DATA, '.tif', sep=''))
+  lookup_peat<-dbReadTable(DB, c("public", data_peat$LUT_NAME)) 
 }
 # planning unit
 if (data_pu$RST_DATA=="ref") {
@@ -221,6 +231,7 @@ if(nrow(data_xtab)==0){
   csv_file<-paste(dirname(proj.file),"/csv_factor_data.csv", sep="")
   write.table(list_of_data_f, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
   addRasterToPG(project, paste0(chg_map, '.tif'), InFactor_i, srid)
+  unlink(paste0(chg_map, '.tif'))
 } else {
   lu.db<-dbReadTable(DB, c("public", data_xtab$TBL_DATA))
 }
@@ -481,138 +492,9 @@ seq.matrix.total<-as.data.frame(cbind(name.matrix$LC_CODE,s.m))
 colnames(seq.matrix.total)<-c("LC_CODE",as.vector(name.matrix$LC_CODE))
 # rm(seq.data, s.m, order_em, order_sq)
 
-#=Export analysis results (raster and qml)
-# qmlcarbon1<-paste(dirQUESC, "/carbon1.qml", sep="")
-# qmlcarbon2<-paste(dirQUESC, "/carbon2.qml", sep="")
-# qmlemisi<-paste(dirQUESC, "/emission.qml", sep="")
-# qmlseq<-paste(dirQUESC, "/sequestration.qml", sep="")
-# qml for carbon t1
-# sink(qmlcarbon1)
-# cat("<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
-# cat('<qgis version="2.0.0-Taoge" minimumScale="0" maximumScale="1e+08" hasScaleBasedVisibilityFlag="0">')
-# cat('  <pipe>')
-# cat('    <rasterrenderer opacity="1" alphaBand="-1" classificationMax="296.703" classificationMinMaxOrigin="CumulativeCutFullExtentEstimated" band="1" classificationMin="0.297" type="singlebandpseudocolor">')
-# cat('      <rasterTransparency/>')
-# cat('      <rastershader>')
-# cat('        <colorrampshader colorRampType="INTERPOLATED" clip="0">')
-# cat('          <item alpha="255" value="5" label="0-5" color="#f7fcf5"/>')
-# cat('          <item alpha="255" value="5" label="0-5" color="#f7fcf5"/>')
-# cat('          <item alpha="255" value="25" label="10-25" color="#bfe5b8"/>')
-# cat('          <item alpha="255" value="50" label="25-50" color="#93d290"/>')
-# cat('          <item alpha="255" value="100" label="50-100" color="#5fba6c"/>')
-# cat('          <item alpha="255" value="200" label="100-200" color="#329b51"/>')
-# cat('          <item alpha="255" value="300" label="200-300" color="#0c7734"/>')
-# cat('          <item alpha="255" value="400" label="300-400" color="#00441b"/>')
-# cat('        </colorrampshader>')
-# cat('      </rastershader>')
-# cat('    </rasterrenderer>')
-# cat('    <brightnesscontrast brightness="0" contrast="0"/>')
-# cat('    <huesaturation colorizeGreen="128" colorizeOn="0" colorizeRed="255" colorizeBlue="128" grayscaleMode="0" saturation="0" colorizeStrength="100"/>')
-# cat('    <rasterresampler maxOversampling="2"/>')
-# cat('  </pipe>')
-# cat('  <blendMode>0</blendMode>')
-# cat('</qgis>')
-# sink()
-# # qml for carbon t2
-# sink(qmlcarbon2)
-# cat("<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
-# cat('<qgis version="2.0.0-Taoge" minimumScale="0" maximumScale="1e+08" hasScaleBasedVisibilityFlag="0">')
-# cat('  <pipe>')
-# cat('    <rasterrenderer opacity="1" alphaBand="-1" classificationMax="296.703" classificationMinMaxOrigin="CumulativeCutFullExtentEstimated" band="1" classificationMin="0.297" type="singlebandpseudocolor">')
-# cat('      <rasterTransparency/>')
-# cat('      <rastershader>')
-# cat('        <colorrampshader colorRampType="INTERPOLATED" clip="0">')
-# cat('          <item alpha="255" value="5" label="0-5" color="#f7fcf5"/>')
-# cat('          <item alpha="255" value="5" label="0-5" color="#f7fcf5"/>')
-# cat('          <item alpha="255" value="25" label="10-25" color="#bfe5b8"/>')
-# cat('          <item alpha="255" value="50" label="25-50" color="#93d290"/>')
-# cat('          <item alpha="255" value="100" label="50-100" color="#5fba6c"/>')
-# cat('          <item alpha="255" value="200" label="100-200" color="#329b51"/>')
-# cat('          <item alpha="255" value="300" label="200-300" color="#0c7734"/>')
-# cat('          <item alpha="255" value="400" label="300-400" color="#00441b"/>')
-# cat('        </colorrampshader>')
-# cat('      </rastershader>')
-# cat('    </rasterrenderer>')
-# cat('    <brightnesscontrast brightness="0" contrast="0"/>')
-# cat('    <huesaturation colorizeGreen="128" colorizeOn="0" colorizeRed="255" colorizeBlue="128" grayscaleMode="0" saturation="0" colorizeStrength="100"/>')
-# cat('    <rasterresampler maxOversampling="2"/>')
-# cat('  </pipe>')
-# cat('  <blendMode>0</blendMode>')
-# cat('</qgis>')
-# sink()
-# # qml for emission
-# sink(qmlemisi)
-# cat("<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
-# cat('<qgis version="2.0.0-Taoge" minimumScale="0" maximumScale="1e+08" hasScaleBasedVisibilityFlag="0">')
-# cat('<pipe>')
-# cat('<rasterrenderer opacity="1" alphaBand="-1" classificationMax="262.787" classificationMinMaxOrigin="CumulativeCutFullExtentEstimated" band="1" classificationMin="0" type="singlebandpseudocolor">')
-# cat('<rasterTransparency/>')
-# cat('<rastershader>')
-# cat('<colorrampshader colorRampType="INTERPOLATED" clip="0">')
-# cat('<item alpha="255" value="0" label="0.000000" color="#fff5f0"/>')
-# cat('<item alpha="255" value="34.1623" label="34.162310" color="#fee0d3"/>')
-# cat('<item alpha="255" value="68.3246" label="68.324620" color="#fcbda4"/>')
-# cat('<item alpha="255" value="102.487" label="102.486930" color="#fc9677"/>')
-# cat('<item alpha="255" value="136.649" label="136.649240" color="#fb7050"/>')
-# cat('<item alpha="255" value="170.812" label="170.811550" color="#f14431"/>')
-# cat('<item alpha="255" value="204.974" label="204.973860" color="#d32020"/>')
-# cat('<item alpha="255" value="236.508" label="236.508300" color="#ac1016"/>')
-# cat('<item alpha="255" value="262.787" label="262.787000" color="#67000d"/>')
-# cat('</colorrampshader>')
-# cat('</rastershader>')
-# cat('</rasterrenderer>')
-# cat('<brightnesscontrast brightness="0" contrast="0"/>')
-# cat('<huesaturation colorizeGreen="128" colorizeOn="0" colorizeRed="255" colorizeBlue="128" grayscaleMode="0" saturation="0" colorizeStrength="100"/>')
-# cat('<rasterresampler maxOversampling="2"/>')
-# cat('</pipe>')
-# cat('<blendMode>0</blendMode>')
-# cat('</qgis>')
-# sink()
-# # qml for sequestration
-# sink(qmlseq)
-# cat("<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>")
-# cat('<qgis version="2.0.0-Taoge" minimumScale="0" maximumScale="1e+08" hasScaleBasedVisibilityFlag="0">')
-# cat('<pipe>')
-# cat('<rasterrenderer opacity="1" alphaBand="-1" classificationMax="262.787" classificationMinMaxOrigin="CumulativeCutFullExtentEstimated" band="1" classificationMin="0" type="singlebandpseudocolor">')
-# cat('<rasterTransparency/>')
-# cat('<rastershader>')
-# cat('<colorrampshader colorRampType="INTERPOLATED" clip="0">')
-# cat('<item alpha="255" value="0" label="0.000000" color="#fff5f0"/>')
-# cat('<item alpha="255" value="34.1623" label="34.162310" color="#fee0d3"/>')
-# cat('<item alpha="255" value="68.3246" label="68.324620" color="#fcbda4"/>')
-# cat('<item alpha="255" value="102.487" label="102.486930" color="#fc9677"/>')
-# cat('<item alpha="255" value="136.649" label="136.649240" color="#fb7050"/>')
-# cat('<item alpha="255" value="170.812" label="170.811550" color="#f14431"/>')
-# cat('<item alpha="255" value="204.974" label="204.973860" color="#d32020"/>')
-# cat('<item alpha="255" value="236.508" label="236.508300" color="#ac1016"/>')
-# cat('<item alpha="255" value="262.787" label="262.787000" color="#67000d"/>')
-# cat('</colorrampshader>')
-# cat('</rastershader>')
-# cat('</rasterrenderer>')
-# cat('<brightnesscontrast brightness="0" contrast="0"/>')
-# cat('<huesaturation colorizeGreen="128" colorizeOn="0" colorizeRed="255" colorizeBlue="128" grayscaleMode="0" saturation="0" colorizeStrength="100"/>')
-# cat('<rasterresampler maxOversampling="2"/>')
-# cat('</pipe>')
-# cat('<blendMode>0</blendMode>')
-# cat('</qgis>')
-# sink()
-# export to dbf file
-# write.dbf(zone_carbon, "emission_by_zone.dbf")
-# write.dbf(fs_table, "summary_QUES-C.dbf")
-# write.dbf(data_merge, "QUES-C_database.dbf")
-# write.dbf(data_zone, "Carbon_Summary.dbf")
-# write.dbf(em.matrix.total,"Total_Emission_Matrix.dbf ")
-# write.dbf(seq.matrix.total, "Total_Sequestration_Matrix.dbf")
-# for (i in 1:length(zone_lookup$ID)){
-#   em_matrix_z<-em.matrix.zonal[which(em.matrix.zonal$ZONE == i),]
-#   em_matrix_z$ZONE<-NULL
-#   seq_matrix_z<-seq.matrix.zonal[which(seq.matrix.zonal$ZONE == i),]
-#   seq_matrix_z$ZONE<-NULL
-#   write.dbf(em_matrix_z,paste("Emission_Matrix_Zone_",i,sep=""))
-#   write.dbf(seq_matrix_z,paste("Sequestration_Matrix_Zone_",i,sep=""))
-# }
-
 #=Save database
+write.dbf(data_merge, paste0('QUESC_database_', T1, '-', T2, '.dbf'))
+
 idx_lut<-idx_lut+1
 eval(parse(text=(paste("in_lut", idx_lut, " <- data_merge", sep=""))))
 
@@ -727,24 +609,28 @@ plot.Admin<-gplot(ref, maxpixels=100000) + geom_raster(aes(fill=as.factor(value)
 
 # save carbon, emission, and sequestration maps 
 setwd(dirQUESC)
-writeRaster(carbon1, filename="carbon1.tif", format="GTiff", overwrite=TRUE)
-writeRaster(carbon2, filename="carbon2.tif", format="GTiff", overwrite=TRUE)
-writeRaster(emission, filename="emission.tif", format="GTiff", overwrite=TRUE)
-writeRaster(sequestration, filename="sequestration.tif", format="GTiff", overwrite=TRUE)
-analysis_map=c('carbon1', 'carbon2', 'emission', 'sequestration')
-for(i in 1:length(analysis_map)){
-  idx_factor<-idx_factor+1
-  eval(parse(text=(paste('factor', idx_factor, '<-', analysis_map[i], sep=''))))  
-  eval(parse(text=(paste("list_of_data_f<-data.frame(RST_DATA='factor", idx_factor,"', RST_NAME='", analysis_map[i], "_", T1, T2,  "', row.names=NULL)", sep=""))))  
-  InFactor_i <- paste("factor", idx_factor, sep="")  
-  dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
-  #write to csv
-  list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
-  csv_file<-paste(dirname(proj.file),"/csv_factor_data.csv", sep="")
-  write.table(list_of_data_f, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
-  eval(parse(text=(paste("addRasterToPG(project, '", analysis_map[i], ".tif', InFactor_i, srid)", sep=''))))
-}
-unlink(list.files(pattern = ".tif"))
+
+color_pallete_cat <- c("#FFCC66", "#A5C663")
+color_pallete_cont <- c("#62D849", "#0000f5", "#6B54D3")
+
+writeRastFile(carbon1, paste0('carbon_', T1, '.tif'), cat = TRUE, colorpal = color_pallete_cat, lookup = lookup_lc)
+writeRastFile(carbon2, paste0('carbon_', T2, '.tif'), cat = TRUE, colorpal = color_pallete_cat, lookup = lookup_lc)
+writeRastFile(emission, paste0('emission_', T1, '-', T2, '.tif'), colorpal = color_pallete_cont)
+writeRastFile(sequestration, paste0('sequestration_', T1, '-', T2, '.tif'), colorpal = color_pallete_cont)
+# analysis_map=c('carbon1', 'carbon2', 'emission', 'sequestration')
+# for(i in 1:length(analysis_map)){
+#   idx_factor<-idx_factor+1
+#   eval(parse(text=(paste('factor', idx_factor, '<-', analysis_map[i], sep=''))))  
+#   eval(parse(text=(paste("list_of_data_f<-data.frame(RST_DATA='factor", idx_factor,"', RST_NAME='", analysis_map[i], "_", T1, T2,  "', row.names=NULL)", sep=""))))  
+#   InFactor_i <- paste("factor", idx_factor, sep="")  
+#   dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
+#   #write to csv
+#   list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
+#   csv_file<-paste(dirname(proj.file),"/csv_factor_data.csv", sep="")
+#   write.table(list_of_data_f, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
+#   eval(parse(text=(paste("addRasterToPG(project, '", analysis_map[i], ".tif', InFactor_i, srid)", sep=''))))
+# }
+# unlink(list.files(pattern = ".tif"))
 resave(idx_QUESC, idx_lut, idx_factor, file=proj.file)
 
 # carbon t1 map
@@ -912,9 +798,10 @@ chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
 chapter2<-"\\b\\fs32 ANALISIS PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
 chapter3<-"\\b\\fs32 ANALISIS PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
 # ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_QUES-C_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("QUES-C_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
+file.copy(paste0(LUMENS_path, "/ques_cover.png"), dirQUESC, recursive = FALSE)
+img_location<-paste0(dirQUESC, "/ques_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
@@ -1177,11 +1064,19 @@ for(i in 1:length(zone_lookup$ID)){
 addNewLine(rtffile)
 done(rtffile)
 
+unlink(img_location)
+
 eval(parse(text=(paste('rtf_QUESC_', T1, '_', T2, '_', pu_name, '<-rtffile', sep=''))))
 eval(parse(text=(paste('resave(rtf_QUESC_', T1, '_', T2, '_', pu_name, ', file=proj.file)', sep=''))))
 
 # command<-paste("start ", "winword ", dirQUESC, "/LUMENS_QUES-C_report.doc", sep="" )
 # shell(command)
+
+resultoutput<-data.frame(PATH=c(paste0(dirQUESC, '/carbon_', T1, '.tif'),
+                                paste0(dirQUESC, '/carbon_', T2, '.tif'),
+                                paste0(dirQUESC, '/emission_', T1, '-', T2, '.tif'),
+                                paste0(dirQUESC, '/sequestration_', T1, '-', T2, '.tif'),
+                                paste0(dirQUESC, '/QUESC_database_', T1, '-', T2, '.dbf')))
 
 dbDisconnect(DB)
 
