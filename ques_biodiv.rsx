@@ -436,19 +436,18 @@ teci.analysis<-function(landuse, lu_path){
 }
 
 saveTECI<-function(mwfile, location, period){
-  file.teci<-paste('TECI_',location,'_',period,'.tif',sep='')
+  file.teci<-paste('TECI', fa_class[p], '_', location,'_',period,'.tif',sep='')
   # add new record in list_of_data_f
-  teci.r_dbname <- paste0("teci", fa_class[p], "_", period)
   idx_factor <- idx_factor + 1
-  list_of_data_f <- rbind(list_of_data_f, data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = teci.r_dbname, stringsAsFactors = FALSE))
+  list_of_data_f <- rbind(list_of_data_f, data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = file.teci, stringsAsFactors = FALSE))
   dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
   # update the list_of_data_f in 'LUMENS_path_user'
   write.csv(list_of_data_f, paste0(LUMENS_path_user, "/list_of_data_f.csv"), row.names = FALSE)
-  # add teci map into the postgre database
-  addRasterToPG(project, paste0(teci.r_dbname, ".tif"), paste0("factor", idx_factor), srid)
   # write the raster file in targeted directory as well as the .qml for value visualization
   tc_pal <- c("#62D849", "#0000f5", "#6B54D3")
   writeRastFile(mwfile, file.teci, colorpal = tc_pal)
+  # add teci map into the postgre database
+  addRasterToPG(project, paste0(file.teci, ".tif"), paste0("factor", idx_factor), srid)
   return(print(paste(file.teci, "has been written")))
 }
 
@@ -1772,7 +1771,7 @@ for(p in 1:length(fa_class)){
       save(landuse_t1,landuse_t2, zone, cl_desc, lookup_z, t1, t2, location, mwfile.init,mwfile.final,habitat.degradation,habitat.loss.NA,habitat.gain.NA, habitat.recovery,file=dbase.preques.name)
     }, error=function(e){cat("QuES-B database production is failed, re-check your data :",conditionMessage(e), "\n")})
     # updating resultoutput vector
-    resultoutput <- c(resultoutput, paste0(quesb_folder, "/TECI_", location, "_", pd_1, ".tif"), paste0(quesb_folder, "/TECI_", location, "_", pd_2, ".tif"), paste0(quesb_folder, "/QUESBdatabase_", location, "_", pd_1, "-", pd_2, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"))
+    resultoutput <- c(resultoutput, paste0(quesb_folder, "/TECI", fa_class[p], "_", location, "_", pd_1, ".tif"), paste0(quesb_folder, "/TECI", fa_class[p],"_", location, "_", pd_2, ".tif"), paste0(quesb_folder, "/QUESBdatabase_", location, "_", pd_1, "-", pd_2, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"), paste0(quesb_folder, "/DIFA_", location,"_", pd_1, ".dbf"))
   }
 }
 
