@@ -189,6 +189,7 @@ write.csv(lookupTableHabitat, habitat_table, row.names = FALSE, quote = FALSE)
 # General details====
 Spat_res <- res(ref)[1] ^ 2 / 10000 # spatial resolution in hectare unit
 location <- as.character(proj_descr[proj_descr$Type == "location", "Description"])
+location <- gsub(" ", "_", location) # remove space character from location
 quesb_dir <- paste0(getwd(), "/QUES-B")
 # Copy the .fca file into the quesb_dir
 file.copy(paste0(LUMENS_path, "/teciuf.fca"), quesb_dir, recursive = FALSE)
@@ -447,7 +448,7 @@ saveTECI<-function(mwfile, location, period){
   tc_pal <- c("#62D849", "#0000f5", "#6B54D3")
   writeRastFile(mwfile, file.teci, colorpal = tc_pal)
   # add teci map into the postgre database
-  addRasterToPG(project, paste0(file.teci, ".tif"), paste0("factor", idx_factor), srid)
+  addRasterToPG(project, paste0(file.teci), paste0("factor", idx_factor), srid)
   return(print(paste(file.teci, "has been written")))
 }
 
