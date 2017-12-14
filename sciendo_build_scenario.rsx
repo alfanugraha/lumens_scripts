@@ -1,4 +1,4 @@
-##[SCIENDO]=group
+##SCIENDO-PostgreSQL=group
 ##Historical_Baseline_Car = file
 
 user_temp_folder<-Sys.getenv("TEMP")
