@@ -442,9 +442,10 @@ saveTECI<-function(mwfile, location, period){
   file.teci<-paste('TECI', fa_class[p], '_', location,'_',period,'.tif',sep='')
   # add new record in list_of_data_f
   idx_factor <- idx_factor + 1
-  list_of_data_f <- rbind(list_of_data_f, data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = file.teci, stringsAsFactors = FALSE))
+  list_of_data_f <- data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = file.teci, stringsAsFactors = FALSE)
   dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
   # update the list_of_data_f in 'LUMENS_path_user'
+  list_of_data_f <- dbReadTable(DB, c("public", "list_of_data_f"))
   write.csv(list_of_data_f, paste0(LUMENS_path_user, "/list_of_data_f.csv"), row.names = FALSE)
   # write the raster file in targeted directory as well as the .qml for value visualization
   tc_pal <- c("#62D849", "#0000f5", "#6B54D3")
@@ -528,8 +529,10 @@ generateDIFAtable<-function(mwfile, tothab, location, period, sampling.grid){
   idx_lut <- idx_lut+1
   dbWriteTable(DB, paste0("in_lut", idx_lut), sumtab1, append=TRUE, row.names=FALSE)
   # update the list_of_data_lut both in LUMENS_path_user as well as in postgre
-  list_of_data_lut <- rbind(list_of_data_lut, data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("DIFA", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE))
+  list_of_data_lut <- data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("DIFA", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE)
   dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+  # update the list_of_data_f in 'LUMENS_path_user'
+  list_of_data_lut <- dbReadTable(DB, c("public", "list_of_data_lut"))
   write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
   # generate dbf version of the 'sumtab1' table
   write.dbf(sumtab1, gsub(pattern = ".csv$", ".dbf", nama.tabel.teci))
@@ -1238,8 +1241,9 @@ for(p in 1:length(fa_class)){
             idx_lut <- idx_lut+1
             dbWriteTable(DB, paste0("in_lut", idx_lut), qb_merge.tab, append=TRUE, row.names=FALSE)
             # update the list_of_data_lut both in LUMENS_path_user as well as in postgre
-            list_of_data_lut <- rbind(list_of_data_lut, data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("QBdb_", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE))
-            dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+            QBdb_addlut <- data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("QBdb_", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE)
+            dbWriteTable(DB, "list_of_data_lut", QBdb_addlut, append=TRUE, row.names=FALSE)
+            list_of_data_lut <- dbReadTable(DB, c("public", "list_of_data_lut"))
             write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
           }
         }
@@ -1407,6 +1411,8 @@ for(p in 1:length(fa_class)){
     #   background[background==-maxval]<-1
     # }, error=function(e){cat("skipping habitat gain plot :",conditionMessage(e), "\n")})
     #====Create RTF Report File====
+    # define location_rpt to replace "_" with space
+    location_rpt <- gsub("_", " ", location)
     # title<-"\\b\\fs32 LUMENS-QUES Project Report\\b0\\fs20"
     title<-"\\b\\fs32 Laporan Proyek LUMENS-\\i QUES\\b0\\fs32"
     # sub_title<-"\\b\\fs28 Sub-modules: Biodiversity Analysis\\b0\\fs20"
@@ -1416,7 +1422,7 @@ for(p in 1:length(fa_class)){
     t_start<-paste("Proses dimulai : ", time_start, sep="")
     time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
     line<-paste("------------------------------------------------------------------------------------------------------------------------------------------")
-    area_name_rep<-paste0("\\b", "\\fs22 ", location, "\\b0","\\fs22")
+    area_name_rep<-paste0("\\b", "\\fs22 ", location_rpt, "\\b0","\\fs22")
     I_O_period_1_rep<-paste0("\\b","\\fs22 ", as.character(pd_1), "\\b0","\\fs22")
     I_O_period_2_rep<-paste0("\\b","\\fs22 ", as.character(pd_2), "\\b0","\\fs22")
     chapter1<-"\\b\\fs28 1. DATA INPUT\\b0\\fs28"
@@ -1429,13 +1435,13 @@ for(p in 1:length(fa_class)){
     # ==== Report 0. Cover=====
     rtffile <- RTF("QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     # INPUT
-    img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
+    img_location <- paste0(LUMENS_path, "/ques_cover.png")
     # loading the .png image to be edited
     cover <- image_read(img_location)
     # to display, only requires to execute the variable name, e.g.: "> cover"
     # adding text at the desired location
-    text_submodule <- paste("Sub-Modul Keanekaragaman Hayati\n\nAnalisis Biodiversitas Bentang Lahan\n", location, ", ", "Periode ", pd_1, "-", pd_2, sep="")
-    cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+    text_submodule <- paste("Sub-Modul Keanekaragaman Hayati\n\nAnalisis Biodiversitas Bentang Lahan\n", location_rpt, ", ", "Periode ", pd_1, "-", pd_2, sep="")
+    cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
     cover_image <- image_write(cover_image)
     # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
     # 'location' defines the relative location of the text to the anchor defined in 'gravity'
@@ -1627,7 +1633,7 @@ for(p in 1:length(fa_class)){
       textif2 <- ""
     }
     # text
-    text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. Pada tahun ", pd_1, " nilai indeks \\i DIFA \\i0 ", location, " adalah sebesar ", AUC.init, ". Dalam periode ", pd_2-pd_1, " tahun, ", textif1, " nilai \\i DIFA\\i0 ", textif2, ".")
+    text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. Pada tahun ", pd_1, " nilai indeks \\i DIFA \\i0 ", location_rpt, " adalah sebesar ", AUC.init, ". Dalam periode ", pd_2-pd_1, " tahun, ", textif1, " nilai \\i DIFA\\i0 ", textif2, ".")
     addParagraph(rtffile, text)
     # allowing the curve to be located in neat position on the next page
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
@@ -1791,9 +1797,11 @@ for(p in 1:length(fa_class)){
 
 
 # closing routine:
-# 1. resave the quesb idx
+# 1. resave the quesb and any other idx
 idx_QUESB <- idx_QUESB+1
 resave(idx_QUESB, file = proj.file)
+resave(idx_factor, file = proj.file)
+resave(idx_lut, file = proj.file)
 # 2. remove fragstat file 
 del_files <- paste0(quesb_dir, "/teciuf.fca")
 del_files <- c(del_files, list.files(quesb_dir, pattern = "^landuse_t", include.dirs = FALSE, full.names = TRUE))
