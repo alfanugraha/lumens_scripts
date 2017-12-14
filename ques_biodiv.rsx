@@ -1659,7 +1659,7 @@ for(p in 1:length(fa_class)){
     addNewLine(rtffile)
     text <- paste0("\\qj Di bawah grafik tersebut, terdapat peta yang menampilkan poligon agregasi untuk menunjukkan letak unit-unit agregasi pada daerah studi. Dengan mencocokkan nama titik dalam grafik terhadap indeks peta, pengguna dapat memetakan perkiraan lokasi terjadinya fenomena-fenomena yang mempengaruhi nilai \\i DIFA \\i0 suatu daerah. Informasi lebih lengkap mengenai bentuk perubahan tutupan lahan yang menyebabkan perubahan nilai IKTT dan kawasan yang terasosiasi disampaikan pada sub-bagian-sub-bagian berikutnya dalam bentuk peta dan tabel.")
     addParagraph(rtffile, text)
-    addNewLine(rtffile)
+    addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     # summary plot
     text <- paste("\\b Grafik Dinamika Nilai IKTT dan Area Fokal \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
     addParagraph(rtffile, text)
@@ -1707,6 +1707,7 @@ for(p in 1:length(fa_class)){
       plot.HR
       luchg.db.recovery
       subch_num <- subch_num + 1
+      if(subch_num ==3) addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
       text <- paste("\\b\\fs24 ", subch_num, ". Penurunan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
       addParagraph(rtffile, text)
       addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HR)
@@ -1723,6 +1724,7 @@ for(p in 1:length(fa_class)){
         plot.HG
         luchg.db.gain
         subch_num <- subch_num + 1
+        if(subch_num ==3) addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
         text <- paste("\\b\\fs24 ", subch_num, ". Kemunculan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
         addParagraph(rtffile, text)
         if (maxValue(chk_gain)>0) {
@@ -1761,15 +1763,15 @@ for(p in 1:length(fa_class)){
       text <- paste("\\b Profil Unit Perencanaan: Kenaikan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(zstat.habitat.degradation), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
-      addParagraph(rtffile, "\\b\\fs20 *max, min, mean, dan sd merupakan deskripsi numerik dari peningkatan nilai IKTT\\b0\\fs20 ")
-      addParagraph(rtffile, "\\b\\fs20 *foc.area atau total focal area dalam hektar\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari peningkatan nilai IKTT\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
       
       text <- paste("\\b Profil Unit Perencanaan: Penurunan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(zstat.habitat.recovery), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
-      addParagraph(rtffile, "\\b\\fs20 *max, min, mean, dan sd merupakan deskripsi numerik dari penurunan nilai IKTT\\b0\\fs20 ")
-      addParagraph(rtffile, "\\b\\fs20 *foc.area atau total focal area dalam hektar\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari penurunan nilai IKTT\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
     }, error=function(e){cat("Melewatkan analisis profil unit perencanaan:",conditionMessage(e), "\n")})
     addNewLine(rtffile, n=1)
@@ -1815,3 +1817,7 @@ for(d in 1:length(del_tif)){
 }
 # 4. convert the resultoutput vector into data.frame
 resultoutput <- data.frame(PATH = resultoutput, stringsAsFactors = FALSE)
+# 5. Pass statusoutput
+statuscode<-1
+statusmessage<-"QUES-B analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
