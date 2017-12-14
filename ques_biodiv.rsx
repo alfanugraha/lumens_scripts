@@ -297,7 +297,7 @@ pr_farea <- function(fclass = "Undisturbed forest"){
 }
 # function to generate sampling grid (polygon)
 generate_sampling_grid <- function(g_res = gridres, n = 1000){
-  ref_poly <- rasterToPolygons(ref,na.rm = TRUE)
+  ref_poly <- gdal_polygonizeR(ref)
   if(g_res > 0){
     sampling.grid <- spsample(x = ref_poly, cellsize = g_res, type = "regular", offset = c(0.5, 0.5))
   } else{
@@ -748,7 +748,7 @@ for(p in 1:length(fa_class)){
     dir.create(quesb_folder)
     #====I Sampling grid raster preparation====
     #Initial raster sampling grid
-    sample_grid <- generate_sampling_grid()
+    if(k==1 & p==1) sample_grid <- generate_sampling_grid()
     #====J DEFINING FOCAL AREA====
     #Initial focal area
     eval(parse(text=paste0("freqlanduse_t",k," <-lut_lc",k,"[lut_lc", k, "$ID != raster.nodata, c('ID', 'COUNT')]")))
