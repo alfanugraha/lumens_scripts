@@ -1,12 +1,11 @@
+##SCIENDO-PostgreSQL=group
 ##Drivers_data=file
 ##LUC_type=string
-##[LUMENS]=group
 
 require(igraph)
 require(rtf)
 require(ggplot2)
 require(Cairo)
-
 
 
 #CREATE RESAVE FUNCTION
