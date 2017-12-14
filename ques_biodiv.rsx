@@ -244,8 +244,10 @@ if (nodata.cek<length(bperiod)){
 #Lu_path definition----
 # the file locations of the synchronized LU raster data
 for(i in 1: length(bperiod)){
+  eval(parse(text=paste0("rm(landCover", bperiod[i], ")")))
   eval(parse(text=paste0("lu", i, "_path <-'", quesb_dir, "/landuse_tNA_", bperiod[i],".tif'")))
 }
+gc()
 
 
 # DEFINE FUNCTIONS====
@@ -522,6 +524,16 @@ generateDIFAtable<-function(mwfile, tothab, location, period, sampling.grid){
   colnames(sumtab1)<-c("ID.grid","Habitat Area(%)","X.cor","Y.cor","ID.x", "ID.y", "IDx.grid", "TECI(%)", "Cumulative Habitat(%)")
   nama.tabel.teci<-paste("DIFA_", location,"_", period, ".csv", sep='')
   write.table(sumtab1, nama.tabel.teci, row.names = FALSE, sep=",")
+  # save table into postgre
+  idx_lut <- idx_lut+1
+  dbWriteTable(DB, paste0("in_lut", idx_lut), sumtab1, append=TRUE, row.names=FALSE)
+  # update the list_of_data_lut both in LUMENS_path_user as well as in postgre
+  list_of_data_lut <- rbind(list_of_data_lut, data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("DIFA", fa_class[p], "_", pd_1, pd_2), stringsAsFactors = FALSE))
+  dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+  write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
+  # generate dbf version of the 'sumtab1' table
+  write.dbf(sumtab1, gsub(pattern = ".csv$", ".dbf", nama.tabel.teci))
+  # return the table 'sumtab1_fin'
   return (sumtab1_fin)
 }
 
