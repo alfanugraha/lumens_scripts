@@ -1,164 +1,45 @@
 #Impact of Land Using to Regional Economy Indicator Analysis
 ##TA-PostgreSQL=group
-##int_con_file=string
-##add_val_file=string
-##fin_dem_file=string
-##add_val_struc_file=string
-##fin_dem_struc_file=string
-##sector_file=string
-##land.distribution_file=string
-##land.requirement_file=string
-##lc.list_file=string
-##labour_file=string
-##unit=string
-##area_name=string
-##I_O_period=number 2000
-##location=string
+##proj.file=string
+##land_req=string
+##projected_land_use=string
+##statusoutput=output table
 
 library(reshape2)
 library(ggplot2)
 library(raster)
 library(foreign)
 library(rtf)
+library(DBI)
+library(RPostgreSQL)
+library(rpostgis)
 library(magick)
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
-user_temp_folder<-Sys.getenv("TEMP")
-if(user_temp_folder=="") {
-  user_temp_folder<-Sys.getenv("TMP")
-}
-LUMENS_path_user <- paste(user_temp_folder,"/LUMENS/LUMENS.log", sep="")
-log.file<-read.table(LUMENS_path_user, header=FALSE, sep=",")
-work_dir<-paste(log.file[1,1], "/", log.file[1,2],"/TA/LandUseChangeImpact", sep="")
-proj.file<-paste(log.file[1,1], "/", log.file[1,2],"/",log.file[1,2], ".lpj", sep="")
 load(proj.file)
-dir.create(work_dir)
+load(land_req)
 
-#SET WORKING DIRECTORY
+# set driver connection
+driver <- dbDriver('PostgreSQL')
+project <- as.character(proj_descr[1,2])
+DB <- dbConnect(
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
+)
+
+#=Set Working Directory
+work_dir<-paste(dirname(proj.file), "/TA/LandUseScenario", idx_TA_regeco, sep="")
+dir.create(work_dir, mode="0777")
 setwd(work_dir)
 
-#READ LANDUSE DATA
-per<-as.data.frame(ls(pattern="freq"))
-n<-nrow(per)
-if(n==0){
-  msgBox <- tkmessageBox(title = "Pre-QUES",
-                         message = "No Land Use/Cover found",
-                         icon = "info",
-                         type = "ok")
-  quit()
-}
-data<-per
-data.y<-NULL
-for (q in 1:n) {
-  data.x<-substr(as.character(factor(data[q,1])), 5, 14)
-  data.y<-c(data.y,data.x)
-  
-}
-data<-as.data.frame(data.y)
-
-n<-nrow(data)
-command1<-NULL
-command2<-NULL
-for(i in 1:n) {
-  if (i!=n){
-    command1<-paste(command1,"period", i, ",", sep="")
-    command2<-paste(command2,"landuse_t", i, ",", sep="")
-  } else {
-    command1<-paste(command1,"period", i, sep="")
-    command2<-paste(command2,"landuse_t", i, sep="")
-  }
-}
-
-#SELECT DATA TO BE ANALYZED
-eval(parse(text=(paste("year<-c(", command1, ")", sep=""))))
-data<-as.data.frame(cbind(data,year))
-data$t1<-0
-data$t2<-0
-colnames(data)[1]<-"data"
-data$data<-as.character(data$data)
-repeat{
-  data_temp<-edit(data)
-  if(sum(data_temp$t1)==1 & sum(data_temp$t2)==1){
-    data_temp$sum<-data_temp$t1+data_temp$t2
-    data_temp <- data_temp[which(data_temp$sum==1),]
-    n_temp<-nrow(data_temp)
-    if(n_temp!=0) {
-      data<-data_temp
-      break  
-    }
-  } else {
-    msgBox <- tkmessageBox(title = "TA",
-                           message = "Choose data to be analyzed. Retry?",
-                           icon = "question", 
-                           type = "retrycancel", default="retry")
-    if(as.character(msgBox)=="cancel"){
-      quit()
-    }
-  }
-}
-
-data$t1<-NULL
-data$t2<-NULL
-data$sum<-NULL
-
-eval(parse(text=(paste("lu_name1 <- names(", data[1,1], ")", sep=""))))
-eval(parse(text=(paste("landuse_t1 <- ", data[1,1], sep=""))))
-eval(parse(text=(paste("lu_name2 <- names(", data[2,1], ")", sep=""))))
-eval(parse(text=(paste("landuse_t2 <- ", data[2,1], sep=""))))
-
-#WRITING TA PROJECT FILE
-filename<-paste("TA_projec_", eval(parse(text=(paste("Sys.Date ()")))), ".lms", sep="")
-date<-Sys.Date()
-sink(filename)
-cat("LUMENS TA Module Project File")
-cat("\n")
-cat(as.character(date))
-cat("\n")
-cat("\n")
-cat(lu_name1)
-cat("\n")
-cat(lu_name2)
-cat("\n")
-cat(int_con_file)
-cat("\n")
-cat(add_val_file)
-cat("\n")
-cat(labour_file)
-cat("\n")
-cat(fin_dem_file)
-cat("\n")
-cat(add_val_struc_file)
-cat("\n")
-cat(fin_dem_struc_file)
-cat("\n")
-cat(sector_file)
-cat("\n")
-cat(land.distribution_file)
-cat("\n")
-cat(land.requirement_file)
-cat("\n")
-cat(lc.list_file)
-cat("\n")
-cat(unit)
-cat("\n")
-cat(area_name)
-cat("\n")
-cat(I_O_period)
-sink()
-
 #READ INPUT FILE
+list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
+
 nodata_val<-0
-int_con<- read.table(int_con_file, header=FALSE, sep=",")
-add_val<- read.table(add_val_file, header=FALSE, sep=",")
-fin_dem<- read.table(fin_dem_file, header=FALSE, sep=",")
-fin_dem_struc<- read.table(fin_dem_struc_file, header=FALSE, sep=",")
-add_val_struc<- read.table(add_val_struc_file, header=FALSE, sep=",")
-sector<- read.table(sector_file, header=FALSE, sep=",")
-labour<- read.table(labour_file, header=FALSE, sep=",")
-land.distribution<-read.dbf(land.distribution_file, as.is = FALSE)
-land.requirement.db<-read.dbf(land.requirement_file, as.is = FALSE)
-lc.list<-read.table(lc.list_file, header=FALSE, sep=",")
+land.requirement.db<-land.requirement_table
+lc.list<-subset(landuse_lut, select=c(ID, Legend))
+
 int_con.m<-as.matrix(int_con)
 add_val.m<-as.matrix(add_val)
 dim<-ncol(int_con.m)
@@ -301,13 +182,14 @@ colnames(multiplier)[4]<-"Inc.multiplier"
 multiplier$Inc.multiplier<-round(multiplier$Inc.multiplier, digits=3)
 
 #Read land use map and calculate area of land use
-landuse<-ratify(landuse_t2, filename='landuse.grd',count=TRUE,overwrite=TRUE)
-landuse0<-ratify(landuse_t1, filename='landuse.grd',count=TRUE,overwrite=TRUE)
-landuse_area<-as.data.frame(levels(landuse))
-landuse_area0<-as.data.frame(levels(landuse0))
-landuse_area<-subset(landuse_area,ID !=nodata_val)
-landuse_area0<-subset(landuse_area0,ID !=nodata_val)
-landuse_area<-subset(landuse_area,ID !=15)
+next_data_luc<-list_of_data_luc[which(list_of_data_luc$RST_NAME==projected_land_use),]
+# next_landuse<-getRasterFromPG(pgconf, project, next_data_luc$RST_DATA, paste(next_data_luc$RST_DATA, '.tif', sep=''))
+next_landuse_lut<-dbReadTable(DB, c("public", next_data_luc$LUT_NAME))
+
+# landuse_area0<-as.data.frame(levels(landuse0))
+landuse_area<-subset(next_landuse_lut, ID != nodata_val)
+landuse_area0<-subset(landuse_lut, ID != nodata_val)
+# landuse_area<-subset(landuse_area,ID !=15)
 landuse_area<-as.matrix(landuse_area$COUNT)
 landuse_area0<-as.matrix(landuse_area0$COUNT)
 landuse_table<-cbind(lc.list,landuse_area0, landuse_area)
@@ -319,7 +201,6 @@ landuse_table<-edit(landuse_table)
 landuse_table$CHANGE<-landuse_table$T2_HA-landuse_table$T1_HA
 
 #MODEL FINAL DEMAND
-land.distribution.prop<-as.matrix(land.distribution)
 land.distribution.scen<-land.distribution.prop %*% landuse_area_diag
 land.requirement.scen<-rowSums(land.distribution.scen)
 fin_dem.rtot<-rowSums(fin_dem)
@@ -405,22 +286,24 @@ write.dbf(Labour_table, Labour_scen_file,  factor2char = TRUE, max_nchar = 254)
 #WRITE REPORT
 title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
 sub_title<-"\\b\\fs28 Sub-modules 2: Regional economic-Impact of land use change\\b0\\fs20"
-date<-paste("Date : ", date, sep="")
+test<-as.character(Sys.Date())
+date<-paste("Date : ", test, sep="")
 time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 chapter1<-"\\b\\fs24 Impact of land use change to GDP \\b0\\fs20"
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_TA-3_LUC-Impact_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("TA-Landuse_scenario_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide3.PNG"
+file.copy(paste0(LUMENS_path, "/ta_cover.png"), work_dir, recursive = FALSE)
+img_location<-paste0(work_dir, "/ta_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
 text_submodule <- paste("Sub-Modul Ekonomi Regional\n\nSimulasi PDRB dari Perubahan Penggunaan Lahan\n", location, ", ", "Tahun ", I_O_period, sep="")
-cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
 # 'location' defines the relative location of the text to the anchor defined in 'gravity'
@@ -428,11 +311,6 @@ cover_image <- image_write(cover_image)
 addPng(rtffile, cover_image, width = 8.267, height = 11.692)
 addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
 
-if (file.exists("C:/Program Files (x86)/LUMENS")){
-  addPng (rtffile, "C:/Program Files (x86)/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-} else{
-  addPng (rtffile, "C:/Program Files/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-}
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -460,6 +338,12 @@ addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300,LAB_graph)
 done(rtffile)
 
+unlink(img_location)
+dbDisconnect(DB)
 
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"TA regional economy analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
 
 

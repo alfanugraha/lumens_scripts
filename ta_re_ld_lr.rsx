@@ -1,147 +1,48 @@
 #Regional Economy Land Distribution and Requirement Analysis
 ##TA-PostgreSQL=group
-##int_con_file=string
-##add_val_file=string
-##fin_dem_file=string
-##add_val_struc_file=string
-##fin_dem_struc_file=string
-##sector_file=string
+##proj.file=string
+##land_use=string
 ##land.distribution_file=string
-##lc.list_file=string
-##labour_file=string
-##unit=string
-##area_name=string
-##I_O_period=number 2000
-##location=string
+##desc_output=string
+##statusoutput=output table
 
 library(reshape2)
 library(ggplot2)
 library(raster)
 library(foreign)
 library(rtf)
+library(DBI)
+library(RPostgreSQL)
+library(rpostgis)
 library(magick)
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
-user_temp_folder<-Sys.getenv("TEMP")
-if(user_temp_folder=="") {
-  user_temp_folder<-Sys.getenv("TMP")
-}
-LUMENS_path_user <- paste(user_temp_folder,"/LUMENS/LUMENS.log", sep="")
-log.file<-read.table(LUMENS_path_user, header=FALSE, sep=",")
-work_dir<-paste(log.file[1,1], "/", log.file[1,2],"/TA/LandRequirement", sep="")
-proj.file<-paste(log.file[1,1], "/", log.file[1,2],"/",log.file[1,2], ".lpj", sep="")
 load(proj.file)
-dir.create(work_dir)
+load(desc_output)
 
-#SET WORKING DIRECTORY
+# set driver connection
+driver <- dbDriver('PostgreSQL')
+project <- as.character(proj_descr[1,2])
+DB <- dbConnect(
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
+)
+
+#=Set Working Directory
+work_dir<-paste(dirname(proj.file), "/TA/Land_Requirement", idx_TA_regeco, sep="")
+dir.create(work_dir, mode="0777")
 setwd(work_dir)
 
-#READ LANDUSE DATA
-per<-as.data.frame(ls(pattern="freq"))
-n<-nrow(per)
-if(n==0){
-  msgBox <- tkmessageBox(title = "Pre-QUES",
-                         message = "No Land Use/Cover found",
-                         icon = "info",
-                         type = "ok")
-  quit()
-}
-data<-per
-data.y<-NULL
-for (q in 1:n) {
-  data.x<-substr(as.character(factor(data[q,1])), 5, 14)
-  data.y<-c(data.y,data.x)
-  
-}
-data<-as.data.frame(data.y)
-
-n<-nrow(data)
-command1<-NULL
-command2<-NULL
-for(i in 1:n) {
-  if (i!=n){
-    command1<-paste(command1,"period", i, ",", sep="")
-    command2<-paste(command2,"landuse_t", i, ",", sep="")
-  } else {
-    command1<-paste(command1,"period", i, sep="")
-    command2<-paste(command2,"landuse_t", i, sep="")
-  }
-}
-
-#SELECT DATA TO BE ANALYZED
-eval(parse(text=(paste("year<-c(", command1, ")", sep=""))))
-data<-as.data.frame(cbind(data,year))
-data$land_analysis<-0
-colnames(data)[1]<-"data"
-data$data<-as.character(data$data)
-repeat{
-  data<-edit(data)
-  if(sum(data$land_analysis)==1){
-      break  
-  } else {
-    msgBox <- tkmessageBox(title = "TA",
-                           message = "Choose data to be analyzed. Retry?",
-                           icon = "question", 
-                           type = "retrycancel", default="retry")
-    if(as.character(msgBox)=="cancel"){
-      quit()
-    }
-  }
-}
-
-data2<-data[which(data$land_analysis==1),]
-data2$land_analysis<-NULL
-
-eval(parse(text=(paste("lu_name <- names(", data[1,1], ")", sep=""))))
-eval(parse(text=(paste("landuse <- ", data[1,1], sep=""))))
-
-#WRITING TA PROJECT FILE
-filename<-paste("TA_projec_", eval(parse(text=(paste("Sys.Date ()")))), ".lms", sep="")
-date<-Sys.Date()
-sink(filename)
-cat("LUMENS TA Module Project File")
-cat("\n")
-cat(as.character(date))
-cat("\n")
-cat(lu_name)
-cat("\n")
-cat(int_con_file)
-cat("\n")
-cat(add_val_file)
-cat("\n")
-cat(labour_file)
-cat("\n")
-cat(fin_dem_file)
-cat("\n")
-cat(add_val_struc_file)
-cat("\n")
-cat(fin_dem_struc_file)
-cat("\n")
-cat(sector_file)
-cat("\n")
-cat(land.distribution_file)
-cat("\n")
-cat(lc.list_file)
-cat("\n")
-cat(unit)
-cat("\n")
-cat(area_name)
-cat("\n")
-cat(I_O_period)
-sink()
-
 #READ INPUT FILE
-nodata_val<-0
-int_con<- read.table(int_con_file, header=FALSE, sep=",")
-add_val<- read.table(add_val_file, header=FALSE, sep=",")
-fin_dem<- read.table(fin_dem_file, header=FALSE, sep=",")
-fin_dem_struc<- read.table(fin_dem_struc_file, header=FALSE, sep=",")
-add_val_struc<- read.table(add_val_struc_file, header=FALSE, sep=",")
-sector<- read.table(sector_file, header=FALSE, sep=",")
-labour<- read.table(labour_file, header=FALSE, sep=",")
-land.distribution<-read.table(land.distribution_file, header=FALSE, sep=",")
-lc.list<-read.table(lc.list_file, header=FALSE, sep=",")
+load(desc_output)
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
+list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
+
+nodata_val<-0 # still hardcode (!)
+row_land_dist <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==land.distribution_file),]
+land.distribution <- list_of_data_lut<-dbReadTable(DB, c("public", row_land_dist$TBL_DATA))
+# lc.list<-read.table(lc.list_file, header=FALSE, sep=",")
 int_con.m<-as.matrix(int_con)
 add_val.m<-as.matrix(add_val)
 dim<-ncol(int_con.m)
@@ -178,9 +79,11 @@ GDP_tot<-colSums(GDP_tot)
 
 #LINK LAND SISTRIBUTION FILE WITH LAND USE MAP
 #Read land use map and calculate area of land use distribution matrix
-landuse<-ratify(landuse, filename='landuse.grd',count=TRUE,overwrite=TRUE)
-landuse_area<-as.data.frame(levels(landuse))
-landuse_area<-subset(landuse_area,ID !=nodata_val)
+data_luc<-list_of_data_luc[which(list_of_data_luc$RST_NAME==land_use),]
+# landuse<-getRasterFromPG(pgconf, project, data_luc$RST_DATA, paste(data_luc$RST_DATA, '.tif', sep=''))
+landuse_lut<-dbReadTable(DB, c("public", data_luc$LUT_NAME))
+
+landuse_area<-subset(landuse_lut,ID !=nodata_val)
 landuse_area<-as.matrix(landuse_area$COUNT)
 land.distribution_t<-as.matrix(land.distribution)
 landuse_area_diag<-diag(as.numeric(as.matrix(landuse_area)))
@@ -233,29 +136,31 @@ LRC_graph<-ggplot(data=order_land.requirement, aes(x=SECTOR, y=LRC, fill=CATEGOR
 
 #EXPORT OUTPUT
 land_distribution_file<-"Land_distribution_matrix.dbf"
-write.dbf(land.distribution.prop, land_distribution_file,  factor2char = TRUE, max_nchar = 254)
+# write.dbf(land.distribution.prop, land_distribution_file,  factor2char = TRUE, max_nchar = 254)
 land_requirement_file<-"Land_requirement_coefficient.dbf"
-write.dbf(land.requirement_table, land_requirement_file, factor2char = TRUE, max_nchar = 254)
+# write.dbf(land.requirement_table, land_requirement_file, factor2char = TRUE, max_nchar = 254)
 
 #WRITE REPORT
 title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
 sub_title<-"\\b\\fs28 Sub-modules 2: Regional economic-Land Requirement Coefficient\\b0\\fs20"
-date<-paste("Date : ", date, sep="")
+test<-as.character(Sys.Date())
+date<-paste("Date : ", test, sep="")
 time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 chapter1<-"\\b\\fs24 Land Requirement Coefficient \\b0\\fs20"
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_TA-2_Land_Requirement_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("TA-Land_Requirement_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide3.PNG"
+file.copy(paste0(LUMENS_path, "/ta_cover.png"), work_dir, recursive = FALSE)
+img_location<-paste0(work_dir, "/ta_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
 text_submodule <- paste("Sub-Modul Ekonomi Regional\n\nAnalisis Kebutuhan dan Produktifitas Lahan\n", location, ", ", "Tahun ", I_O_period, sep="")
-cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
 # 'location' defines the relative location of the text to the anchor defined in 'gravity'
@@ -263,11 +168,6 @@ cover_image <- image_write(cover_image)
 addPng(rtffile, cover_image, width = 8.267, height = 11.692)
 addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
 
-if (file.exists("C:/Program Files (x86)/LUMENS")){
-  addPng (rtffile, "C:/Program Files (x86)/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-} else{
-  addPng (rtffile, "C:/Program Files/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-}
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -284,3 +184,32 @@ addTable(rtffile,land.requirement_table,font.size=7.5)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=300,LRC_graph)
 done(rtffile)
+
+#=Save all params into .ldbase objects
+save(int_con,
+     add_val,
+     fin_dem,
+     fin_dem_struc,
+     add_val_struc,
+     sector,
+     labour,
+     unit,
+     location,
+     I_O_period,
+     Leontief_df,
+     GDP,
+     Linkages_table,
+     multiplier,
+     land.distribution.prop,
+     land.requirement_table,
+     landuse,
+     landuse_lut,
+     file=paste0('LandRequirement', I_O_period, '.ldbase'))
+
+unlink(img_location)
+dbDisconnect(DB)
+
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"TA regional economy analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)

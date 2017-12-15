@@ -1,5 +1,6 @@
 #Regional Economy Single I-O Descriptive Analysis
 ##TA-PostgreSQL=group
+##proj.file=string
 ##int_con_file=string
 ##add_val_file=string
 ##fin_dem_file=string
@@ -10,7 +11,7 @@
 ##unit=string
 ##location=string
 ##I_O_period= number 2000
-##statutoutput=output table
+##statusoutput=output table
 
 library(reshape2)
 library(ggplot2)
@@ -40,46 +41,23 @@ working_dir<-paste(dirname(proj.file), "/TA/Descriptive_Analysis", idx_TA_regeco
 dir.create(working_dir, mode="0777")
 setwd(working_dir)
 
-#WRITING TA PROJECT FILE
-filename<-paste("TA_projec_", eval(parse(text=(paste("Sys.Date ()")))), ".lms", sep="")
-date<-Sys.Date()
-sink(filename)
-cat("LUMENS TA Module Project File")
-cat("\n")
-cat(as.character(date))
-cat("\n")
-cat(int_con_file)
-cat("\n")
-cat(int_con_file)
-cat("\n")
-cat(add_val_file)
-cat("\n")
-cat(fin_dem_file)
-cat("\n")
-cat(add_val_struc_file)
-cat("\n")
-cat(fin_dem_struc_file)
-cat("\n")
-cat(sector_file)
-cat("\n")
-cat(labour_file)
-cat("\n")
-cat(unit)
-cat("\n")
-cat(location)
-cat("\n")
-cat(I_O_period)
-sink()
-
 #READ INPUT FILE
 list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
-int_con <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==int_con_file),]
-add_val <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_file),]
-fin_dem <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_file),]
-fin_dem_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_struc_file),]
-add_val_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_struc_file),]
-sector <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==sector_file),]
-labour <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==labour_file),]
+row_int_con <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==int_con_file),]
+row_add_val <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_file),]
+row_fin_dem <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_file),]
+row_fin_dem_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_struc_file),]
+row_add_val_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_struc_file),]
+row_sector <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==sector_file),]
+row_labour <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==labour_file),]
+
+int_con <- list_of_data_lut<-dbReadTable(DB, c("public", row_int_con$TBL_DATA))
+add_val <- list_of_data_lut<-dbReadTable(DB, c("public", row_add_val$TBL_DATA))
+fin_dem <- list_of_data_lut<-dbReadTable(DB, c("public", row_fin_dem$TBL_DATA))
+fin_dem_struc <- list_of_data_lut<-dbReadTable(DB, c("public", row_fin_dem_struc$TBL_DATA))
+add_val_struc <- list_of_data_lut<-dbReadTable(DB, c("public", row_add_val_struc$TBL_DATA))
+sector <- list_of_data_lut<-dbReadTable(DB, c("public", row_sector$TBL_DATA))
+labour <- list_of_data_lut<-dbReadTable(DB, c("public", row_labour$TBL_DATA))
 
 int_con.m<-as.matrix(int_con)
 add_val.m<-as.matrix(add_val)
@@ -242,7 +220,8 @@ PENGGANDA<-"Sectoral_multiplier"
 #WRITE REPORT
 title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
 sub_title<-"\\b\\fs28 Sub-modules 2: Regional economic-Descriptive analysis (Single I-O)\\b0\\fs20"
-date<-paste("Date : ", date, sep="")
+test<-as.character(Sys.Date())
+date<-paste("Date : ", test, sep="")
 time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
@@ -254,14 +233,14 @@ chapter3<-"\\b\\fs24 2.Analysis of multiplier \\b0\\fs20"
 # ==== Report 0. Cover=====
 rtffile <- RTF("TA-Descriptive_analysis_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-file.copy(paste0(LUMENS_path, "/ta_cover.png"), dirQUESC, recursive = FALSE)
-img_location<-paste0(dirQUESC, "/ta_cover.png")
+file.copy(paste0(LUMENS_path, "/ta_cover.png"), working_dir, recursive = FALSE)
+img_location<-paste0(working_dir, "/ta_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
 text_submodule <- paste("Sub-Modul Ekonomi Regional\n\nAnalisis Deskriptif Sektor Ekonomi\n", location, ", ", "Tahun ", I_O_period, sep="")
-cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
 # 'location' defines the relative location of the text to the anchor defined in 'gravity'
@@ -338,8 +317,12 @@ save(int_con,
      Linkages_table,
      multiplier,
      file=paste0('Descriptive', I_O_period, '.ldbase'))
+resave(idx_TA_regeco, file=proj.file)
+
+unlink(img_location)
+dbDisconnect(DB)
 
 #=Writing final status message (code, message)
 statuscode<-1
-statusmessage<-"QUES-C analysis successfully completed!"
+statusmessage<-"TA regional economy analysis successfully completed!"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
