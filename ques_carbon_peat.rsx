@@ -1,641 +1,452 @@
 ##QUES-PostgreSQL=group
-proj.file="C:/LUMENS_new/Lumens_02/Lumens_02.lpj"
-landuse_1="lu00_48s_100m"
-landuse_2="lu05_48s_100m"
-planning_unit="pu_IDH_48s_100m"
-peatmap="peat_48s_30mF"
-# lookup_z="C:/LUMENS_new/Data/3_Tabular/pu_IDH_lut.csv"
-# lookup_lc="C:/LUMENS_new/Data/3_Tabular/landuse_lut.csv"
-lookup_lut="lut_cstock"
-lookup_c_peat="C:/LUMENS_new/Data/3_Tabular/factor_emisi_peat.csv"
-# QUESC_database="C:/LUMENS_new/Lumens_02/QUES/QUES-C/1_QUESC___/QUES-C_database.dbf"
-raster.nodata=0
+##proj.file=string
+##landuse_1=string
+##landuse_2=string
+##planning_unit=string
+##raster.nodata=number 0
+##include_peat=selection Yes;No
+##peatmap=string
+##peat_cell= numeric 1; allow more than 1 value to be entered at the same time
+##lookup_c_peat=string
+##resultoutput=output table
 ##statusoutput=output table
 
-library(tiff)
-library(foreign)
-library(rasterVis)
-library(reshape2)
-library(plyr)
-library(lattice)
-library(latticeExtra)
-library(RColorBrewer)
-library(grid)
-library(ggplot2)
-library(spatial.tools)
+# 14/12/2017
+
+# attempt to calculate emission from peat decomposition
+
+library(raster)
 library(rtf)
-library(jsonlite)
-library(splitstackshape)
-library(stringr)
-library(DBI)
+library(data.table)
+library(ggplot2)
 library(RPostgreSQL)
 library(rpostgis)
-library(tcltk)
+library(magick)
+library(stringr)
+library(spatial.tools)
+library(rasterVis)
+library(foreign)
 
-time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
+# DEFINE FUNCTIONS====
+# 0. polygonize
+# Define the function as written in https://johnbaumgartner.wordpress.com/2012/07/26/getting-rasters-into-shape-from-r/
+gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
+                             pypath= paste0(LUMENS_path,"/bin/gdal_polygonize.py"), readpoly=TRUE, quiet=TRUE) {
+  if (isTRUE(readpoly)) require(rgdal)
+  if (is.null(pypath)) {
+    pypath <- Sys.which('gdal_polygonize.py')
+  }
+  if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
+  owd <- getwd()
+  on.exit(setwd(owd))
+  setwd(dirname(pypath))
+  if (!is.null(outshape)) {
+    outshape <- sub('\\.shp$', '', outshape)
+    f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
+    if (any(f.exists))
+      stop(sprintf('File already exists: %s',
+                   toString(paste(outshape, c('shp', 'shx', 'dbf'),
+                                  sep='.')[f.exists])), call.=FALSE)
+  } else outshape <- tempfile()
+  if (is(x, 'Raster')) {
+    require(raster)
+    writeRaster(x, {f <- tempfile(fileext='.tif')})
+    rastpath <- normalizePath(f)
+  } else if (is.character(x)) {
+    rastpath <- normalizePath(x)
+  } else stop('x must be a file path (character string), or a Raster object.')
+  system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
+                                  pypath, rastpath, gdalformat, outshape)))
+  if (isTRUE(readpoly)) {
+    shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
+    return(shp)
+  }
+  return(NULL)
+}
 
-#=Load active project
-load(proj.file)
+# adding tables from inside a table list
+add.lsTab <- function(x){
+  pu_id <- unique(x$ZONE)
+  x <- x[, c("ID_LC1", "ID_LC2", "HECT", "em_calc")]
+  for(t in 1:2){
+    # merging the 'x' with 'luc_lut' to get class names
+    if(t == 1) p_text <- "semula" else p_text <- "setelah"
+    x <- merge(x, luc_lut, by.x = paste0("ID_LC", t), by.y = "ID", all.x = TRUE)
+    names(x)[names(x) == "Legend"] <- paste0("Tutupan ", p_text)
+  }
+  # subset columns
+  x <- x[,c("Tutupan semula", "Tutupan setelah", "HECT", "em_calc")]
+  # reorder the rows based on 'em_calc'
+  x <- x[order(x$em_calc, decreasing = TRUE), ]
+  # subset the rows when necessary
+  if(nrow(x) > 10) x <- x[1:10,]
+  names(x) <- c("Tutupan semula", "Tutupan setelah", "Luas*", "Emisi*")
+  n.c <- ncol(x)
+  al_col <- c("L", "L", replicate((n.c-2), "R"))
+  text <- paste0("\\b ", lookup_z[lookup_z$ID == pu_id, "Legend"], "\\b0")
+  addParagraph(rtffile, text)
+  addTable(rtffile, x, font.size = 9, col.justify = al_col, header.col.justify = al_col)
+  text <- paste0("\\fs16 *Luas dalam hektar; Emisi dalam ton CO2-eq\\fs16")
+  addParagraph(rtffile, text)
+  addNewLine(rtffile, n = 1)
+}
 
-lut.peat<-read.table(lookup_c_peat, sep=",", header=TRUE)
+# INPUTS=====
+# proj.file="D:/LUMENS/trial/coarse_SS/coarse_SS.lpj"
+# landuse_1="lu10_48s_100m"
+# landuse_2="lu14_48s_100m"
+# planning_unit="pu_IDH_48s_100m"
+# raster.nodata= 0
+# include_peat= 1
+# peatmap= "dummy_peat"
+# peat_cell=1
+# lookup_c_peat= "lc_peat_em"
 
-# set driver connection
+# blanko for resultoutput
+resultoutput <- character()
+
+# Parameterization and pre-processings====
+load(proj.file) # loading the project file
+# Static parameters and variables
+time_start <- format(Sys.time())
+# Static parameters and variables
+time_start <- format(Sys.time())
+# setting up the connection with the PostGre database system
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
 DB <- dbConnect(
   driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
   user=as.character(pgconf$user), password=as.character(pgconf$pass)
 )
-
-#=Retrieve all list of data that are going to be used
+# Setting up the working directory
+setwd(paste0(dirname(proj.file), "/QUES"))
+# derive the list of available data----
 list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
 list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
 list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
-list_of_data_peat<-dbReadTable(DB, c("public", "list_of_data_peat"))
-
-# return the selected data from the list
-data_luc1<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_1),]
-data_luc2<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_2),]
-data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==planning_unit),]
-data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==lookup_lut),]
-data_peat<-list_of_data_peat[which(list_of_data_peat$RST_NAME==peatmap),]
-
-T1<-data_luc1$PERIOD
-T2<-data_luc2$PERIOD
-
-#=Set Working Directory
-pu_name<-data_pu$RST_NAME
-peat_name<-data_peat$RST_NAME
-idx_QUESC_peat<-1
-#idx_QUESC_peat<-idx_QUESC_peat+1
-dirQUESC<-paste(dirname(proj.file), "/QUES/QUES-C/", idx_peat, "_QUESC_Peat_", T1, "_", T2, "_", pu_name, sep="")
-dir.create(dirQUESC, mode="0777")
-
-# create temp directory
-dir.create(LUMENS_path_user, mode="0777")
-setwd(LUMENS_path_user)
-
-#=Set initial variables
+list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
 # reference map
 ref.obj<-exists('ref')
-ref.path<-paste(dirname(proj.file), '/ref.tif', sep='')
+ref.path<-paste(dirname(proj.file), '/reference.tif', sep='')
 if(!ref.obj){
   if(file.exists(ref.path)){
     ref<-raster(ref.path)
   } else {
-    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
+    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'reference.tif')
   }
 }
 # planning unit
+data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==planning_unit),]
 if (data_pu$RST_DATA=="ref") {
   zone<-ref
-  lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  count_ref<-as.data.frame(freq(ref))
+  count_ref<-na.omit(count_ref)
+  colnames(count_ref)<-c("IDADM", "COUNT")
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  lookup_z<-merge(count_ref, ref_table, by="IDADM")
 } else {
   zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
   lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
 }
-# peat area
-if (data_peat$RST_DATA=="ref") {
-  zone<-ref
-  lookup_c_peat<-dbReadTable(DB, c("public", data_peat$LUT_NAME)) 
-} else {
-  peat<-getRasterFromPG(pgconf, project, data_peat$RST_DATA, paste(data_peat$RST_DATA, '.tif', sep=''))
-  lookup_c_peat<-dbReadTable(DB, c("public", data_peat$LUT_NAME)) 
-}
 
-# landuse first time period
-landuse1<-getRasterFromPG(pgconf, project, data_luc1$RST_DATA, paste(data_luc1$RST_DATA, '.tif', sep=''))
-# landuse second time period
-landuse2<-getRasterFromPG(pgconf, project, data_luc2$RST_DATA, paste(data_luc2$RST_DATA, '.tif', sep=''))
-# landcover lookup table
-lookup_c<-dbReadTable(DB, c("public", data_lut$TBL_DATA)) 
-# set lookup table
-lookup_c<-lookup_c[which(lookup_c[1] != raster.nodata),]
-lookup_lc<-lookup_c
-lookup_ref<-lut_ref
-lookup_c.peat<-lut.peat[which(lut.peat[1] != raster.nodata),]
-colnames(lookup_lc)<-c("ID","LC","CARBON")
-colnames(lookup_z)<-c("ID", "COUNT_ZONE", "ZONE")
-colnames(lookup_ref)<-c("REF", "REF_NAME")
+# peat map====
+peatmap <- list_of_data_pu[which(list_of_data_pu$RST_NAME==peatmap),]
+# peat att.tble
+pt_table <- dbReadTable(DB, c("public", peatmap$LUT_NAME))
+peatmap <- getRasterFromPG(pgconf, project, peatmap$RST_DATA, paste0(peatmap$RST_DATA, ".tif"))
 
-#=Projection handling
-if (grepl("+units=m", as.character(ref@crs))){
-  print("Raster maps have projection in meter unit")
-  Spat_res<-res(ref)[1]*res(ref)[2]/10000
-  paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C peat will automatically generate data in Ha unit")
-} else if (grepl("+proj=longlat", as.character(ref@crs))){
-  print("Raster maps have projection in degree unit")
-  Spat_res<-res(ref)[1]*res(ref)[2]*(111319.9^2)/10000
-  paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C peat will automatically generate data in Ha unit")
+# lookup table carbon peat
+lookup_c.pt <- list_of_data_lut[list_of_data_lut$TBL_NAME==lookup_c_peat,"TBL_DATA"]
+lookup_c.pt <- dbReadTable(DB, c("public", lookup_c.pt))
+# standardize the column names
+names(lookup_c.pt)[1] <- "ID"
+names(lookup_c.pt)[ncol(lookup_c.pt)] <- "Peat" # the table may contain only two columns or three
+
+# identification of time dimension====
+T_1 <- list_of_data_luc[list_of_data_luc$RST_NAME == landuse_1, "PERIOD"]
+T_2 <- list_of_data_luc[list_of_data_luc$RST_NAME == landuse_2, "PERIOD"]
+
+# summarize the lookup table for land use/cover classes
+luc_1 <- dbReadTable(DB, c("public", list_of_data_luc[list_of_data_luc$RST_NAME == landuse_1, "LUT_NAME"]))
+luc_2 <- dbReadTable(DB, c("public", list_of_data_luc[list_of_data_luc$RST_NAME == landuse_2, "LUT_NAME"]))
+luc_lut <- unique(rbind(luc_1, luc_2)[, c("ID", "Legend")])
+# load chg map
+# define chg_db
+# conditional testing for assessing the impact of the land use change in habitat conditions
+# checking the availability of the change analysis in the database
+
+t_mult <- abs((T_2-T_1))/2 # multiplier, in year
+chg_db_name <- tolower(paste0("xtab_", planning_unit, T_1, T_2))
+if(chg_db_name  %in% list_of_data_lut$TBL_NAME){
+  # loading the lulc change cross table from postgre database as 'lu_db' dataframe
+  chg_db <- list_of_data_lut[list_of_data_lut$TBL_NAME == chg_db_name, "TBL_DATA"]
+  chg_db <- dbReadTable(DB, c("public", chg_db))
+  # loading the associated raster file as 'lu_chg' raster
+  lu_chg <- getRasterFromPG(pgconf, project, list_of_data_f[list_of_data_f$RST_NAME == gsub("xtab", "chgmap", chg_db_name), "RST_DATA"], paste0(gsub("xtab", "chgmap", chg_db_name), ".tif"))
 } else{
-  msgBox <- tkmessageBox(title = "QUES",
-                         message = "Raster map projection is unknown",
-                         icon = "info",
-                         type = "ok")
+  statuscode<-0
+  statusmessage<-"Change analysis result of the selected period coudn't be found. Please run Pre-QUES before continuing"
+  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
   quit()
 }
 
-#=Check peat data
-check.peat<-as.integer(exists("idx_peat"))
-check.peat<-as.data.frame(as.character(ls(pattern="idx_peat")))
-if(nrow(check.peat)!=0){
-  peatmap<-peat*100
-  zone_peat_map<-zone+peatmap
 
-  legend_zone_peat<-as.data.frame(freq(zone_peat_map))
-  colnames(legend_zone_peat)[1]="ID"
-  legend_zone_peat<-merge(lookup_z, legend_zone_peat, by="ID", all=T)
-  colnames(legend_zone_peat)[3]="Z_NAME_PEAT"
-  legend_zone_peat$COUNT_ZONE<-NULL
-  legend_zone_peat<-legend_zone_peat[which(legend_zone_peat$count != "NA"),]
-  legend_zone_peat<-legend_zone_peat[which(legend_zone_peat[1] != raster.nodata),]
-  n_legend_zone_peat<-nrow(legend_zone_peat)
 
-  #fill Z_NAME_peat with peat
-  legend_zone_peat$Z_NAME_PEAT<-as.character(legend_zone_peat$Z_NAME_PEAT)
-  for(i in 1:(n_legend_zone_peat)){
-    if(legend_zone_peat[i,1] > 100){
-      id<-legend_zone_peat[i,1]-100
-      temp<-lookup_z[which(lookup_z$ID == id),]
-      legend_zone_peat[i,2]<-paste(as.character(temp[1,3]), "_Gambut", sep="")
-    }
-  }
-  zone<-zone_peat_map
-  lut.pu_peat<-legend_zone_peat
-  lut.pu_peat$ck_peat<-ifelse(lut.pu_peat$ID >= 100, "TRUE", "FALSE")
+# generate the subset====
+# peat reclassification
+rec_value <- pt_table$ID
+rep_value <- replicate(length(rec_value), NA)
+rep_value[which(rec_value %in% peat_cell)] <- 1
+peatmap <- reclassify(peatmap, matrix(c(rec_value, rep_value), ncol = 2))
+# FROM NOW ON, PEATMAP IS BOOLEAN 1=PEAT; NA= NONPEAT
+# subset the lu_chg
+chg_ptmap <- lu_chg * peatmap
+
+# generate summary table which indicate the emission associated with the change occurring on the peat area====
+chg_ptable <- freq(chg_ptmap)
+chg_ptable <- as.data.frame(chg_ptable)
+names(chg_ptable) <- c("ID", "COUNT")
+chg_ptable$HECT <- chg_ptable$COUNT * res(ref)[1] ^ 2/10000 # area in hectare, only valid for maps with meter unit
+chg_ptable <- chg_ptable[,c("ID", "HECT")]
+# subset the chg_db based on the values exist in the newly created raster
+sub.chg_db <- chg_db[chg_db$ID_CHG %in% chg_ptable$ID, ! names(chg_db) %in% "COUNT"]
+# merge with the chg_ptable
+chg_ptable <- merge(chg_ptable, sub.chg_db, by.x = "ID", by.y = "ID_CHG", all.x = TRUE)
+
+# merge with the 'lookup_c.pt'
+for(p in 1:2){ # 
+  chg_ptable <- merge(chg_ptable, lookup_c.pt, by.x = paste0("ID_LC", p), by.y = "ID", all.x = TRUE)
+  names(chg_ptable)[names(chg_ptable) == "Peat"] <- paste0("Cp_", eval(parse(text= paste0("T_", p))))
 }
 
-#=Set project properties
-title=location
-tab_title<-as.data.frame(title)
-period1=T1
-period2=T2
-period=period2-period1
-proj_prop<-as.data.frame(title)
-proj_prop$period1<-period1
-proj_prop$period2<-period2
-proj_prop$period <- do.call(paste, c(proj_prop[c("period1", "period2")], sep = " - "))
+# calculate the total emission of each row
+chg_ptable$raw_em <- t_mult*eval(parse(text= paste0("chg_ptable$Cp_", T_1, "+ chg_ptable$Cp_", T_2)))
 
-nLandCoverId<-nrow(lookup_lc)
-nPlanningUnitId<-nrow(lookup_z)
-nRefId<-nrow(lookup_ref)
-nEmFacPeatId<-nrow(lut.pu_peat)
+chg_ptable$em_calc <- chg_ptable$raw_em * chg_ptable$HECT
 
-#=Create land use change data dummy
-#=Create cross-tabulation for reference
-dummy1<-data.frame(nPU=lookup_ref$REF, divider=nLandCoverId*nLandCoverId)
-dummy1<-expandRows(dummy1, 'divider')
+# merge as data.table
+chg_pdtable <- data.table(chg_ptable[, c("ZONE", "em_calc", "HECT")])
+chg_pdtable <- chg_pdtable[, lapply(.SD, sum), by = list(ZONE)][!is.na(ZONE)]
 
-dummy2<-data.frame(nT1=lookup_c.peat$ID, divider=nLandCoverId)
-dummy2<-expandRows(dummy2, 'divider')
-dummy2<-data.frame(nT1=rep(dummy2$nT1, nRefId))
+# emission map: peat area either with emission or not
+em_map <- reclassify(chg_ptmap, as.matrix(chg_ptable[,c("ID", "raw_em")]))
 
-dummy3<-data.frame(nT2=rep(rep(lookup_lc$ID, nLandCoverId), nRefId))
+# plotting planning unit map====
+myColors1 <- brewer.pal(9,"Set1")
+myColors2 <- brewer.pal(8,"Accent")
+myColors3 <- brewer.pal(12,"Paired")
+myColors4 <- brewer.pal(9, "Pastel1")
+myColors5 <- brewer.pal(8, "Set2")
+myColors6 <- brewer.pal(8, "Dark2")
+myColors7 <- rev(brewer.pal(11, "RdYlGn"))
+myColors  <-c(myColors5,myColors1, myColors2, myColors3, myColors4, myColors7, myColors6)
+area_zone<-lookup_z
+colnames(area_zone)[1]<-'ID'
+colnames(area_zone)[3]<-'ZONE'
+myColors.Z <- myColors[1:length(unique(area_zone$ID))]
+ColScale.Z<-scale_fill_manual(name="Unit Perencanaan", breaks=area_zone$ID, labels=area_zone$ZONE, values=myColors.Z)
+plot.Z<-gplot(zone, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
+  coord_equal() + ColScale.Z +
+  theme(plot.title = element_text(lineheight= 5, face="bold")) + guides( fill = guide_legend(title.position = "top", ncol = 2)) +
+  theme( legend.position = "bottom", axis.title.x=element_blank(), axis.title.y=element_blank(),
+         panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+         legend.title = element_text(size=8),
+         legend.text = element_text(size = 6),
+         legend.key.height = unit(0.25, "cm"),
+         legend.key.width = unit(0.25, "cm"))
 
-landUseChangeRefDummy<-cbind(dummy1, dummy2, dummy3)
-colnames(landUseChangeRefDummy)<-c('REF', 'ID_LC1', 'ID_LC2')
+# plotting emission map====
+# generate bg_poly
+background <- ref/ref
+bg_poly <- gdal_polygonizeR(background)
+# maximum range of value
+maxval <- ceiling(max(values(em_map), na.rm = TRUE))
+# plotting functions
+p.em_map <- gplot(em_map)
+p.em_map <- p.em_map + geom_polygon(data = bg_poly, aes(x = long, y = lat, group = group), fill="#FFCC66", show.legend = FALSE) +
+  geom_raster(aes(fill=value)) + scale_fill_gradient2(low = "#223BF8", mid = "#A0FD01", high="#FF6001", midpoint = maxval/2, guide="colourbar", na.value = NA)
+p.em_map <- p.em_map + labs(fill = "Emisi Gambut") + coord_equal() + theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+                                                                            panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+                                                                            legend.title = element_text(size=8, face = "bold"),
+                                                                            legend.text = element_text(size = 8),
+                                                                            legend.key.height = unit(0.375, "cm"),
+                                                                            legend.key.width = unit(0.375, "cm"))
 
-R1<-(ref*1) + (landuse1*100^1) + (landuse2*100^2) 
-ref.db<-as.data.frame(freq(R1))
-ref.db<-na.omit(ref.db)
-n<-3
-k<-0
-ref.db$value_temp<-ref.db$value
-while(k < n) {
-  eval(parse(text=(paste("ref.db$Var", n-k, "<-ref.db$value_temp %% 100", sep=""))))  
-  ref.db$value_temp<-floor(ref.db$value_temp/100)
-  k=k+1
+# plotting the emission at the landscape level====
+# generate the table as the basis
+lsc_em_table <- chg_ptable[, c("ID_LC1", "ID_LC2", "em_calc")]
+for(t in 1:2){
+  # merging the 'lsc_em_table' with 'luc_lut' to get class names
+  lsc_em_table <- merge(lsc_em_table, luc_lut, by.x = paste0("ID_LC", t), by.y = "ID", all.x = TRUE)
+  names(lsc_em_table)[names(lsc_em_table) == "Legend"] <- paste0("LC_", t)
 }
-ref.db$value_temp<-NULL
-colnames(ref.db) = c("ID_CHG", "COUNT", "REF", "ID_LC1", "ID_LC2")
-ref.db<-merge(landUseChangeRefDummy, ref.db, by=c('REF', 'ID_LC1', 'ID_LC2'), all=TRUE)
-ref.db$ID_CHG<-ref.db$REF*1 + ref.db$ID_LC1*100^1 + ref.db$ID_LC2*100^2
-ref.db<-replace(ref.db, is.na(ref.db), 0)
+lsc_em_table <- data.table(lsc_em_table)
+lsc_em_table <- lsc_em_table[, lapply(.SD, sum), by = list(ID_LC1, ID_LC2, LC_1, LC_2)][!is.na(em_calc)]
+lsc_em_table <- as.data.frame(lsc_em_table)
+lsc_em_table$abbr <- paste0(abbreviate(lsc_em_table$LC_1), "->", (abbreviate(lsc_em_table$LC_2)))
+lsc_em_table <- lsc_em_table[order(lsc_em_table$em_calc, decreasing = TRUE), ]
+lsc_em_table <- lsc_em_table[1:10, ]
+# plotting functions----
+lsc_em.plot <- ggplot(lsc_em_table, aes(x = reorder(abbr, -em_calc), y = em_calc)) + geom_bar(stat = "identity")
+# rotate the axis text
+lsc_em.plot <- lsc_em.plot + theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + labs(x = "", y = "Emisi (ton CO2 eq)")
+# legend table: list of abbreviation
+abbr_leg <- lsc_em_table[, c("abbr", "LC_1", "LC_2")]
+names(abbr_leg) <- c("Singkatan", paste0("Kelas tutupan ", T_1), paste0("Kelas tutupan ", T_2))
+# table for each planning unit with peat====
+pu.chg_ptable <- split(chg_ptable, f = chg_ptable$ZONE)
+# sort records in each table in the list based on the amount of peat emission
+pu.chg_ptable <- lapply(pu.chg_ptable, function(x) x[order(x$em_calc, decreasing = TRUE),])
+# sort the table according to the total emission
+pu.chg_ptable <- pu.chg_ptable[eval(parse(text=paste0("as.character(", as.character(chg_pdtable[order(chg_pdtable$em_calc, decreasing = TRUE), "ZONE"]), ")")))]
 
-#=Create cross-tabulation for peat zone
-xtab<-tolower(paste('xtab_', peat_name, "_", T1, "_", T2, sep=''))
-data_xtab<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==xtab),]
-if(nrow(data_xtab)==0){
-  dummy1<-data.frame(nPU=lut.pu_peat$ID, divider=nLandCoverId*nLandCoverId)
-  dummy1<-expandRows(dummy1, 'divider')
-  
-  dummy2<-data.frame(nT1=lookup_c.peat$ID, divider=nLandCoverId)
-  dummy2<-expandRows(dummy2, 'divider')
-  dummy2<-data.frame(nT1=rep(dummy2$nT1, nEmFacPeatId))
-  
-  dummy3<-data.frame(nT2=rep(rep(lookup_c.peat$ID, nLandCoverId), nEmFacPeatId))
-  
-  landUseChangeMapDummy<-cbind(dummy1, dummy2, dummy3)
-  colnames(landUseChangeMapDummy)<-c('ZONE_PEAT', 'ID_LC1', 'ID_LC2')
-  
-  R2<-(zone*1) + (landuse1*100^1) + (landuse2*100^2) 
-  lu.db<-as.data.frame(freq(R2))
-  lu.db<-na.omit(lu.db)
-  n<-3
-  k<-0
-  lu.db$value_temp<-lu.db$value
-  while(k < n) {
-    eval(parse(text=(paste("lu.db$Var", n-k, "<-lu.db$value_temp %% 100", sep=""))))  
-    lu.db$value_temp<-floor(lu.db$value_temp/100)
-    k=k+1
-  }
-  lu.db$value_temp<-NULL
-  colnames(lu.db) = c("ID_CHG", "COUNT", "ZONE_PEAT", "ID_LC1", "ID_LC2")
-  lu.db<-merge(landUseChangeMapDummy, lu.db, by=c('ZONE_PEAT', 'ID_LC1', 'ID_LC2'), all=TRUE)
-  lu.db$ID_CHG<-lu.db$ZONE*1 + lu.db$ID_LC1*100^1 + lu.db$ID_LC2*100^2
-  lu.db<-replace(lu.db, is.na(lu.db), 0)
-  
-  idx_lut<-idx_lut+1
-  eval(parse(text=(paste("in_lut", idx_lut, " <- lu.db", sep=""))))
-  
-  eval(parse(text=(paste("list_of_data_lut<-data.frame(TBL_DATA='in_lut", idx_lut,"', TBL_NAME='", xtab, "', row.names=NULL)", sep=""))))
-  # save to PostgreSQL
-  InLUT_i <- paste('in_lut', idx_lut, sep="")
-  dbWriteTable(DB, InLUT_i, eval(parse(text=(paste(InLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
-  dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
-  
-  setwd(dirQUESC)
-  idx_factor<-idx_factor+1
-  chg_map<-tolower(paste('chgmap_', peat_name, "_", T1, "_", T2, sep=''))
-  eval(parse(text=(paste("writeRaster(R2, filename='", chg_map, ".tif', format='GTiff', overwrite=TRUE)", sep=""))))
-  eval(parse(text=(paste("factor", idx_factor, "<-'", chg_map, "'", sep=''))))  
-  eval(parse(text=(paste("list_of_data_f<-data.frame(RST_DATA='factor", idx_factor,"', RST_NAME='", chg_map, "', row.names=NULL)", sep=""))))  
-  InFactor_i <- paste("factor", idx_factor, sep="")  
-  dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
-  #write to csv
-  list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
-  csv_file<-paste(dirname(proj.file),"/csv_factor_data.csv", sep="")
-  write.table(list_of_data_f, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
-  addRasterToPG(project, paste0(chg_map, '.tif'), InFactor_i, srid)
-} else {
-  lu.db<-dbReadTable(DB, c("public", data_xtab$TBL_DATA))
-}
-# rename column
-colnames(lookup_c.peat) = c("ID_LC1", "LC_t1", "FacEm_t1")
-data_merge <- merge(lu.db,lookup_c.peat,by="ID_LC1")
-colnames(lookup_c.peat) = c("ID_LC2", "LC_t2", "FacEm_t2")
-data_merge <- as.data.frame(merge(data_merge,lookup_c.peat,by="ID_LC2"))
-lookup_z_peat<-lut.pu_peat
-colnames(lookup_z_peat)[3]="COUNT_ZONE"
-colnames(lookup_z_peat)[1]="ZONE_PEAT"
-colnames(lookup_z_peat)[2]="Z_NAME_PEAT"
-data_merge <- as.data.frame(merge(data_merge,lookup_z_peat,by="ZONE_PEAT"))
-data_merge$COUNT<-data_merge$COUNT*Spat_res
-data_merge$COUNT_ZONE<-data_merge$COUNT_ZONE*Spat_res
-refMelt<-melt(data = ref.db, id.vars=c('REF'), measure.vars=c('COUNT'))
-refArea<-dcast(data = refMelt, formula = REF ~ ., fun.aggregate = sum)
+# merge chg_pdtable with lookup_Z to obtain the planning unit names
+chg_pdtable <- merge(chg_pdtable, lookup_z[,c("ID", "Legend")], by.x = "ZONE", by.y = "ID", all.x =TRUE)
+chg_pdtable <- chg_pdtable[ order(chg_pdtable$em_calc, decreasing = TRUE), c("Legend", "HECT", "em_calc")]
+# adding total summary
+chg_pdtable <- rbind(chg_pdtable, data.frame(Legend = "TOTAL", HECT = sum(chg_pdtable$HECT), em_calc = sum(chg_pdtable$em_calc), stringsAsFactors = FALSE))
+names(chg_pdtable)[names(chg_pdtable) == "Legend"] <- "Unit Perencanaan"
+names(chg_pdtable)[2:3] <- c("Luas*", "Emisi*")
+# redirect into the dirQUESC to save reports and other data====
+dirQUESC<-paste(dirname(proj.file), "/QUES/QUES-C/", idx_QUESC, "_QUESC_", T_1, "_", T_2, "_", planning_unit, sep="")
+dir.create(dirQUESC, mode="0777")
+setwd(dirQUESC)
 
-#=Carbon accounting process
-NAvalue(landuse1)<-raster.nodata
-NAvalue(landuse2)<-raster.nodata
-rcl.m.c1<-as.matrix(lookup_c.peat[,1])
-rcl.m.c2<-as.matrix(lookup_c.peat[,3])
-rcl.m<-cbind(rcl.m.c1,rcl.m.c2)
-rcl.m<-rbind(rcl.m, c(0, NA))
-FacEm1<-reclassify(landuse1, rcl.m)
-FacEm2<-reclassify(landuse2, rcl.m)
-emission<-((FacEm1+FacEm2)/2)
+# Reporting system
+#====Create RTF Report File====
+# title<-"\\b\\fs32 LUMENS-QUES Project Report\\b0\\fs20"
+title<-"\\b\\fs32 Laporan Proyek LUMENS-\\i QUES\\b0\\fs32"
+# sub_title<-"\\b\\fs28 Sub-modules: Biodiversity Analysis\\b0\\fs20"
+sub_title<-"\\b\\fs28 Sub-modul: Karbon-Gambut\\b0\\fs28"
+test<-as.character(Sys.Date())
+date<-paste("Tanggal : ", test, sep="")
+t_start<-paste("Proses dimulai : ", time_start, sep="")
+time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+line<-paste("------------------------------------------------------------------------------------------------------------------------------------------")
+area_name_rep<-paste0("\\b", "\\fs22 ", location, "\\b0","\\fs22")
+I_O_period_1_rep<-paste0("\\b","\\fs22 ", as.character(T_1), "\\b0","\\fs22")
+I_O_period_2_rep<-paste0("\\b","\\fs22 ", as.character(T_2), "\\b0","\\fs22")
+chapter1<-"\\b\\fs28 1. EMISI AKIBAT DEKOMPOSISI GAMBUT DI TINGKAT BENTANG LAHAN\\b0\\fs28"
+chapter2<-"\\b\\fs28 2. ANALISIS UNIT PERENCANAAN \\b0\\fs28"
 
-#=Modify factor emission density for each time series
-data_merge$em<-((data_merge$FacEm_t1+data_merge$FacEm_t2)/2)*data_merge$COUNT
-data_merge$LU_CHG <- do.call(paste, c(data_merge[c("LC_t1", "LC_t2")], sep = " to "))
-data_merge$null<-0
-data_merge$nullCek<-data_merge$em
 
-#Write QUESC_peat database
-csv_file<-paste(dirname(proj.file),"/QUES/QUES-C/QUESC_peat_database.csv", sep="")
-write.table(data_merge, csv_file, quote=FALSE, row.names=FALSE, sep=",")
+# ==== Report 0. Cover=====
+rtffile <- RTF("QUES-Cpeat_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+# INPUT
+img_location <- paste0(LUMENS_path, "/ques_cover.png")
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul Karbon\n\nAnalisis Emisi akibat Dekomposisi Gambut\ndan Keterkaitannya dengan\nPerubahan Penggunaan Lahan\n\n", location, ", ", "Periode ", T_1, "-", T_2, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
 
-#=Generate area_zone lookup and calculate min area
-area_zone<-melt(data = data_merge, id.vars=c('ZONE_PEAT'), measure.vars=c('COUNT'))
-area_zone<-dcast(data = area_zone, formula = ZONE_PEAT ~ ., fun.aggregate = sum)
-colnames(area_zone)[1]<-"ID"
-colnames(area_zone)[2]<-"COUNT"
-area_zone$ID<-as.numeric(as.character(area_zone$ID))
-area_zone<-area_zone[with(area_zone, order(ID)),]
-colnames(lookup_z_peat)[1]<-"ID"
-area_zone<-merge(area_zone, lookup_z_peat, by="ID")
-area<-min(sum(area_zone$COUNT), sum(data_merge$COUNT))
-
-#=Generate administrative unit
-colnames(refArea)[1]<-"ID"
-colnames(refArea)[2]<-"COUNT"
-colnames(lookup_ref)[1]<-"ID"
-colnames(lookup_ref)[2]<-"KABKOT"
-area_admin<-merge(refArea, lookup_ref, by="ID")
-
-#=Create QUES-C database
-#=Zonal statistics database
-lg<-length(unique(data_merge$ZONE_PEAT))
-zone_lookup<-area_zone
-data_zone<-area_zone
-data_zone$Z_CODE<-toupper(abbreviate(data_zone$Z_NAME_PEAT))
-data_zone$Rate_seq<-data_zone$Rate_em<-data_zone$Avg_FeacEm_t2<-data_zone$Avg_FeacEm_t1<-0
-for(a in 1:lg){
-  i<-unique(data_merge$ZONE_PEAT)[a]
-  data_z<-data_merge[which(data_merge$ZONE_PEAT == i),]
-  data_zone<-within(data_zone, {Avg_FeacEm_t1<-ifelse(data_zone$ID == i, sum(data_z$FacEm_t1*data_z$COUNT)/sum(data_z$COUNT),Avg_FeacEm_t1)}) 
-  data_zone<-within(data_zone, {Avg_FeacEm_t2<-ifelse(data_zone$ID == i, sum(data_z$FacEm_t2*data_z$COUNT)/sum(data_z$COUNT),Avg_FeacEm_t2)}) 
-  data_zone<-within(data_zone, {Rate_em<-ifelse(data_zone$ID == i, sum(data_z$em)/(sum(data_z$COUNT)*period),Rate_em)}) 
-}
-data_zone$COUNT_ZONE<-NULL
-data_zone[,6:8]<-round(data_zone[,6:8],digits=2)
-
-#=Emission
-# calculate largest source of emission
-data_merge_sel <- data_merge[ which(data_merge$nullCek > data_merge$null),]
-order_em <- as.data.frame(data_merge[order(-data_merge$em),])
-# total emission
-tb_em_total<-as.data.frame(cbind(order_em$LU_CHG, as.data.frame(round(order_em$em, digits=3))))
-colnames(tb_em_total)<-c("LU_CHG", "em")
-tb_em_total<-aggregate(em~LU_CHG,data=tb_em_total,FUN=sum)
-tb_em_total$LU_CODE<-as.factor(toupper(abbreviate(tb_em_total$LU_CHG, minlength=5, strict=FALSE, method="both")))
-tb_em_total<-tb_em_total[order(-tb_em_total$em),]
-tb_em_total<-tb_em_total[c(3,1,2)]
-tb_em_total$Percentage<-as.numeric(format(round((tb_em_total$em / sum(tb_em_total$em) * 100),2), nsmall=2))
-tb_em_total_10<-head(tb_em_total,n=10)
-# zonal emission
-tb_em_zonal<-as.data.frame(NULL)
-for (i in 1:length(zone_lookup$ID)){
-  tryCatch({
-    a<-(zone_lookup$ID)[i]
-    tb_em<-as.data.frame(cbind(order_em$ZONE, order_em$LU_CHG, as.data.frame(round(order_em$em, digits=3))))
-    colnames(tb_em)<-c("ZONE","LU_CHG", "em")
-    tb_em_z<-as.data.frame(tb_em[which(tb_em$ZONE == a),])
-    tb_em_z<-aggregate(em~ZONE+LU_CHG,data=tb_em_z,FUN=sum)
-    tb_em_z$LU_CODE<-as.factor(toupper(abbreviate(tb_em_z$LU_CHG, minlength=5, strict=FALSE, method="both")))
-    tb_em_z<-tb_em_z[order(-tb_em_z$em),]
-    tb_em_z<-tb_em_z[c(1,4,2,3)]
-    tb_em_z$Percentage<-as.numeric(format(round((tb_em_z$em / sum(tb_em_z$em) * 100),2), nsmall=2))
-    tb_em_z_10<-head(tb_em_z,n=10)
-    tb_em_zonal<-rbind(tb_em_zonal,tb_em_z_10)
-  },error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
-}
-# rm(tb_em, tb_em_total, tb_em_z, tb_em_z_10)
-
-#=Zonal additional statistics
-if (((length(unique(data_merge$ID_LC1)))>(length(unique(data_merge$ID_LC2))))){
-  dimention<-length(unique(data_merge$ID_LC1))
-  name.matrix<-cbind(as.data.frame(data_merge$ID_LC1), as.data.frame(data_merge$LC_t1))
-  name.matrix<-unique(name.matrix)
-  colnames(name.matrix)<-c("ID","LC")
-  name.matrix<-name.matrix[order(name.matrix$ID),]
-  name.matrix$LC_CODE<-toupper(abbreviate(name.matrix$LC, minlength=4, method="both"))
-} else{
-  dimention<-length(unique(data_merge$ID_LC2))
-  name.matrix<-cbind(as.data.frame(data_merge$ID_LC2), as.data.frame(data_merge$LC_t2))
-  name.matrix<-unique(name.matrix)
-  colnames(name.matrix)<-c("ID","LC")
-  name.matrix<-name.matrix[order(name.matrix$ID),]
-  name.matrix$LC_CODE<-toupper(abbreviate(name.matrix$LC, minlength=4, method="both"))
-}
-
-#=Transition matrix
-# zonal emission matrix
-e.m.z<-matrix(0, nrow=dimention, ncol=dimention)
-em.matrix.zonal<-as.data.frame(NULL)
-for (k in 1:length(zone_lookup$ID)){
-  for (i in 1:nrow(e.m.z)){
-    for (j in 1:ncol(e.m.z)){
-      em.data<-data_merge_sel[which(data_merge_sel$ID_LC1==i & data_merge_sel$ID_LC2==j & data_merge_sel$ZONE==k),]
-      e.m.z[i,j]<-as.numeric(round(sum(em.data$em), 2))
-    }
-  }
-  e.m.z<-as.data.frame(e.m.z)
-  e.m.z.c<-as.data.frame(cbind(name.matrix$LC_CODE,e.m.z))
-  e.m.z.c<-cbind(rep(k,nrow(e.m.z)),e.m.z.c)
-  em.matrix.zonal<-rbind(em.matrix.zonal,e.m.z.c)
-}
-colnames(em.matrix.zonal)<-c("ZONE","LC_CODE",as.vector(name.matrix$LC_CODE))
-# rm(em.data, e.m.z, e.m.z.c)
-# total emission matrix
-e.m<-matrix(0, nrow=dimention, ncol=dimention)
-for (i in 1:nrow(e.m)){
-  for (j in 1:ncol(e.m)){
-    em.data<-data_merge_sel[which(data_merge_sel$ID_LC1==i & data_merge_sel$ID_LC2==j),]
-    e.m[i,j]<-round(sum(em.data$em), digits=2)
-  }
-}
-e.m<-as.data.frame(e.m)
-em.matrix.total<-as.data.frame(cbind(name.matrix$LC_CODE,e.m))
-colnames(em.matrix.total)<-c("LC_CODE",as.vector(name.matrix$LC_CODE))
-# rm(em.data, e.m)
-
-#=Save database
-idx_lut<-idx_lut+1
-eval(parse(text=(paste("in_lut", idx_lut, " <- data_merge", sep=""))))
-
-eval(parse(text=(paste("list_of_data_lut<-data.frame(TBL_DATA='in_lut", idx_lut,"', TBL_NAME='out_hist_quesc_", tolower(pu_name), T1, T2, "', row.names=NULL)", sep=""))))
-# save to PostgreSQL
-InLUT_i <- paste('in_lut', idx_lut, sep="")
-dbWriteTable(DB, InLUT_i, eval(parse(text=(paste(InLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
+# rtffile <- RTF("LUMENS_QUES-B_report.lpr", font.size=10, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+addParagraph(rtffile, title)
+addParagraph(rtffile, sub_title)
+addNewLine(rtffile)
+addParagraph(rtffile, line)
+addParagraph(rtffile, date)
+addParagraph(rtffile, t_start)
+addParagraph(rtffile, time_end)
+# addParagraph(rtffile, time_end)
+addParagraph(rtffile, line)
+# ==== Report 0.1 Table of Contents page====
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+addHeader(rtffile, title = "\\qc\\b\\fs28 DAFTAR ISI\\b0\\fs28", TOC.level = 1)
+addNewLine(rtffile, n = 1.5)
+addTOC(rtffile)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+#==== Report I. EMISI AKIBAT DEKOMPOSISI GAMBUT DI TINGKAT BENTANG LAHAN ====
+addHeader(rtffile, chapter1, TOC.level = 1)
+addNewLine(rtffile, n = 1.5)
+addNewLine(rtffile)
+# planning unit map
+text <- paste("\\b Peta Unit Perencanaan \\b0", area_name_rep)
+addParagraph(rtffile, text)
+addPlot.RTF(rtffile, plot.fun=print, width=6.27, height = (4 + 0.24 + round(nrow(lookup_z)/2, digits = 0)*0.14), res=150, plot.Z)
+addNewLine(rtffile, n=1)
+# emission map
+text <- paste("\\b Peta Emisi akibat Dekomposisi Gambut \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_1_rep, "\\b  - \\b0", I_O_period_2_rep, sep="")
+addParagraph(rtffile, text)
+addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, p.em_map)
+# bar chart to visualize the 
+text <- paste("\\b Kontribusi Tipologi Perubahan Penggunaan Lahan terhadap Emisi Gambut \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_1_rep, "\\b  - \\b0", I_O_period_2_rep, sep="")
+addParagraph(rtffile, text)
+addPlot.RTF(rtffile, plot.fun=print, width=4.3, height=5, res=150, lsc_em.plot)
+addNewLine(rtffile, n=1)
+text <- paste0("\\b Keterangan\\b0")
+addParagraph(rtffile, text)
+addTable(rtffile, abbr_leg, font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
+addNewLine(rtffile, n=1)
+# summary table for each planning unit
+text <- paste("\\b Kontribusi Unit Perencanaan terhadap Emisi Gambut \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_1_rep, "\\b  - \\b0", I_O_period_2_rep, sep="")
+addParagraph(rtffile, text)
+addTable(rtffile, chg_pdtable, font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
+text <- paste0("*Luas dalam hektar; Emisi dalam Ton CO2-eq")
+addNewLine(rtffile, n=1)
+#==== Report II. ANALISIS UNIT PERENCANAAN ====
+addHeader(rtffile, chapter2, TOC.level = 1)
+addNewLine(rtffile, n=1.5)
+# plot the tables
+lapply(pu.chg_ptable, add.lsTab)
+# lsc_em.plot abbr_leg
+done(rtffile)
+# resaving indices and rtffile====
+eval(parse(text=paste0("QUESCp", "_", planning_unit, "_", T_1, "_", T_2, " <- rtffile")))
+eval(parse(text = paste0("resave(QUESCp", "_", planning_unit, "_", T_1, "_", T_2, ", file = proj.file)")))
+# saving tables and maps as hard files and into postgis
+# 1. chg_ptable into postgis
+# save table into postgre
+idx_lut <- idx_lut+1
+dbWriteTable(DB, paste0("in_lut", idx_lut), chg_ptable, append=TRUE, row.names=FALSE)
+# update the list_of_data_lut both in LUMENS_path_user as well as in postgre
+list_of_data_lut <- data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("Cpeat_",planning_unit, "_", T_1, T_2), stringsAsFactors = FALSE)
 dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+# update the list_of_data_lut in 'LUMENS_path_user'
+list_of_data_lut <- dbReadTable(DB, c("public", "list_of_data_lut"))
+write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
+# 2. chg_pdtable as .dbf (resultoutput)
+# save table into postgre
+idx_lut <- idx_lut+1
+dbWriteTable(DB, paste0("in_lut", idx_lut), chg_pdtable, append=TRUE, row.names=FALSE)
+# update the list_of_data_lut both in LUMENS_path_user as well as in postgre
+list_of_data_lut <- data.frame(TBL_DATA = paste0("in_lut", idx_lut), TBL_NAME = paste0("Cpeat_sum_",planning_unit, "_", T_1, T_2), stringsAsFactors = FALSE)
+dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+# update the list_of_data_lut in 'LUMENS_path_user'
+list_of_data_lut <- dbReadTable(DB, c("public", "list_of_data_lut"))
+write.csv(list_of_data_lut, paste0(LUMENS_path_user, "/list_of_data_lut.csv"), row.names = FALSE)
+# generate dbf version of the 'sumtab1' table
+write.dbf(chg_pdtable, paste0("Cpeat_sum_",planning_unit, "_", T_1, T_2, ".dbf"))
 
-# #=Rearrange zone carbon
-# zone_carbon_pub<-zone_carbon
-# colnames(zone_carbon_pub) <- c("ID", "Luas (Ha)", "Tutupan lahan", "Total emisi (Ton CO2-eq)", "Total sekuestrasi(Ton CO2-eq)", "Emisi bersih (Ton CO2-eq)", "Laju emisi (Ton CO2/Ha.yr)")
-# admin_carbon_pub<-admin_carbon
-# colnames(admin_carbon_pub) <- c("ID", "Luas (Ha)", "Wil. Administratif", "Total emisi (Ton CO2-eq)", "Total sekuestrasi(Ton CO2-eq)", "Emisi bersih (Ton CO2-eq)", "Laju emisi (Ton CO2/Ha.yr)")
-# data_zone_pub<-data_zone
-# data_zone_pub$Z_CODE<-NULL
-# colnames(data_zone_pub) <- c("ID", "Luas (Ha)", "Unit Perencanaan", "Rerata Karbon Periode 1", "Rerata Karbon Periode 2", "Emisi bersih", "Laju emisi")
+# 3. peat emission map 'p.em_map' (resultoutput)====
+idx_factor <- idx_factor+1
+data_ptmap <- paste0('Cpeat', '_',planning_unit, '_',T_1, T_2)
+add_row_f <- data.frame(RST_DATA = paste0("factor", idx_factor), RST_NAME = data_ptmap, stringsAsFactors = FALSE)
+dbWriteTable(DB, "list_of_data_f", add_row_f, append=TRUE, row.names=FALSE)
+# update the list_of_data_f in 'LUMENS_path_user'
+list_of_data_f <- dbReadTable(DB, c("public", "list_of_data_f"))
+write.csv(list_of_data_f, paste0(LUMENS_path_user, "/list_of_data_f.csv"), row.names = FALSE)
+# write the raster file in targeted directory as well as the .qml for value visualization
+pt_pal <- c("#223BF8","#A0FD01","#FF6001")
+writeRastFile(p.em_map, data_ptmap, colorpal = pt_pal)
+# add teci map into the postgre database
+addRasterToPG(project, paste0(data_ptmap, ".tif"), paste0("factor", idx_factor), srid)
 
-#READ PEAT DATA
-check.peat<-as.integer(exists("idx_peat"))
-if (check.peat==0) {
-    tkmessageBox(title = "LUMENS process halted", message = "Peat area is not defines. Please add peat map into active database", icon = "error", type = "ok")
-} else 
-  # SELECTING AVAILABLE QUES-C ANALYSIS
-  QUESC_peat_list<-as.data.frame(ls(pattern="QUESC_peat_database"))
-  colnames (QUESC_peat_list) [1]<-"Data"
-  QUESC_peat_list$Usage<-0
-  repeat{
-    QUESC_peat_list<-edit(QUESC_peat_list)
-    if(sum(QUESC_peat_list$Usage)==1){
-      break
-    }
-  }
-  QUESC_peat_list <- QUESC_peat_list[which(QUESC_peat_list$Usage==1),]
-  QUESC_peat_list$Usage<-NULL
-  sel.QUESC<-as.character(QUESC_peat_list[1,1])
-  peat_t1<-as.integer(substr(sel.QUESC, 16:19, 19))
-  peat_t2<-as.integer(substr(sel.QUESC, 21:24, 25))
-  text1<-paste("QUESC_Peat_database_", as.character(peat_t1),"-", as.character(peat_t2), sep="")
-  eval(parse(text=(paste("QUESC_Peat_database_", as.character(peat_t1),"_", as.character(peat_t2), "<-", sel.QUESC, sep=""))))
-  eval(parse(text=(paste("cross<-r.brick_", as.character(peat_t1),"_", as.character(peat_t2), sep=""))))
-  cross<-stack(cross,Peat_1)
-  cross<-as.data.frame(crosstab(cross))
-  
-  colnames(cross)[1] ="ID_LC1"
-  colnames(cross)[2] = "ID_LC2"
-  colnames(cross)[3] = "ZONE_PEAT"
-  colnames(cross)[4] = "PEAT"
-  colnames(cross)[5] = "COUNT"
-  colnames(lut.c)[1]="ID_LC1"
-  colnames(lut.c)[2]="LC_t1"
-  colnames(lut.c)[3]="FacEm_t1"
-  data_merge <- merge(cross,lut.c,by="ID_LC1")
-  colnames(lut.c)[1]="ID_LC2"
-  colnames(lut.c)[2]="LC_t2"
-  colnames(lut.c)[3]="FacEm_t2"
-  data_merge <- as.data.frame(merge(data_merge,lut.c,by="ID_LC2"))
-  colnames(lut.pu)[1]="ZONE_PEAT"
-  colnames(lut.pu)[2]="Z_NAME"
-  data_merge <- as.data.frame(merge(data_merge,lut.pu,by="ZONE_PEAT"))
-  colnames(lut.peat)[1]="ID_LC1"
-  colnames(lut.peat)[2]="LC_PEAT_t1"
-  colnames(lut.peat)[3]="PEAT_EM_t1"
-  data_merge <- as.data.frame(merge(data_merge,lut.peat,by="ID_LC1"))
-  colnames(lut.peat)[1]="ID_LC2"
-  colnames(lut.peat)[2]="LC_PEAT_t2"
-  colnames(lut.peat)[3]="PEAT_EM_t2"
-  data_merge <- as.data.frame(merge(data_merge,lut.peat,by="ID_LC2"))
-  data_merge$LC_PEAT_t1<-NULL
-  data_merge$LC_PEAT_t2<-NULL
-  data_merge$PEAT[is.na(data_merge$PEAT)] <- 0
-  data_merge$PEAT_EM_t1[which(data_merge$PEAT!=1)]<-0
-  data_merge$PEAT_EM_t2[which(data_merge$PEAT!=1)]<-0
-  rm(cross)
-  
-  # Calculate carbon stock changes
-  Spat_res<-(res(ref)^2)/10000
-  data_merge$FacEm_t1<-data_merge$FacEm_t1
-  data_merge$FacEm_t2<-data_merge$FacEm_t2
-  data_merge$ck_em<-as.integer(data_merge$FacEm_t1>data_merge$FacEm_t2)
-  data_merge$ck_sq<-as.integer(data_merge$FacEm_t1<data_merge$FacEm_t2)
-  data_merge$em<-(data_merge$FacEm_t1-data_merge$FacEm_t2)*data_merge$ck_em*data_merge$COUNT*3.67*Spat_res
-  data_merge$sq<-(data_merge$FacEm_t2-data_merge$FacEm_t1)*data_merge$ck_sq*data_merge$COUNT*3.67*Spat_res
-  data_merge$LU_CHG <- do.call(paste, c(data_merge[c("LC_t1", "LC_t2")], sep = " to "))
-  data_merge$null<-0
-  data_merge$nullCek<-data_merge$em+data_merge$sq
-  # Calculate below ground emission from peat
-  period<-peat_t2-peat_t1
-  data_merge$em_peat<-((data_merge$PEAT_EM_t1+data_merge$PEAT_EM_t2)/2)*period*data_merge$COUNT*Spat_res
-  data_merge$em_tot<-data_merge$em+data_merge$em_peat
-  
-  #generate area_zone lookup and calculate min area
-  area_zone<-as.data.frame(freq(pu_pu1))
-  colnames(area_zone)[1]<-"ID"
-  colnames(area_zone)[2]<-"COUNT"
-  colnames(lut.pu)[1]<-"ID"
-  area_zone<-merge(area_zone, lut.pu, by="ID")
-  area<-min(sum(area_zone$COUNT), sum(data_merge$COUNT))
-  
-  
-  #create QUES-C database
-  
-  #make zonal statistics database
-  lg<-length(unique(data_merge$ZONE))
-  zone_lookup<-area_zone
-  data_zone<-area_zone
-  data_zone$Z_CODE<-toupper(abbreviate(data_zone$Z_NAME))
-  for(i in 1:lg){
-    data_z<-data_merge[which(data_merge$ZONE_PEAT == i),]
-    data_zone$Avg_C_t1[which(data_zone$ID == i)]<-sum(data_z$FacEm_t1*data_z$COUNT)/sum(data_z$COUNT)
-    data_zone$Avg_C_t2[which(data_zone$ID == i)]<-sum(data_z$FacEm_t2*data_z$COUNT)/sum(data_z$COUNT)
-    data_zone$Rate_em[which(data_zone$ID == i)]<-sum(data_z$em)/(sum(data_z$COUNT)*period)
-    data_zone$Rate_seq[which(data_zone$ID == i)]<-sum(data_z$sq)/(sum(data_z$COUNT)*period)
-    data_zone$Rate_em_peat[which(data_zone$ID == i)]<-sum(data_z$em_peat)/(sum(data_z$COUNT)*period)
-    data_zone$Rate_em_tot[which(data_zone$ID == i)]<-sum(data_z$em_tot)/(sum(data_z$COUNT)*period)
-  }
-  data_zone[,5:8]<-round(data_zone[,5:8],digits=3)
-  
-  # Additional statistic
-  data_merge2<-subset(data_merge, COUNT>0)
-  
-  em_above<-sum(data_merge2$em)
-  em_below<-sum(data_merge2$em_peat)
-  rate_above<-em_above/(sum(data_merge2$COUNT)*period)
-  rate_below<-em_below/(sum(data_merge2$COUNT)*period)
-  percent_below<-(em_below/(em_above+em_below))*100
-  
-  # Overall emission
-  overal_em<-cbind(em_above, em_below, rate_above, rate_below, percent_below)
-  colnames(overal_em)[1]<-"Emission (tCO2)"
-  colnames(overal_em)[2]<-"Peat Emission (tCO2)"
-  colnames(overal_em)[3]<-"Emission Rate (tCO2/ha.yr)"
-  colnames(overal_em)[4]<-"Peat Emission Rate (tCO2/ha.yr)"
-  colnames(overal_em)[5]<-"Percent Peat Emission (%)"
-  
-  #Largest source
-  source.melt <- melt(data = data_merge2, id.vars=c('LU_CHG'), measure.vars=c('em_peat'))
-  source.cast <- dcast(data = source.melt, formula = LU_CHG ~ ., fun.aggregate = sum)
-  source.cast2 <- source.cast[order(-source.cast$.),]
-  source.cast2sel<-head(source.cast2, n=5)
-  colnames(source.cast2sel)[1]<-"LU_Change"
-  colnames(source.cast2sel)[2]<-"Peat_Emission_in_tCO"
-  summ<-sum(source.cast2sel[2])
-  
-  dirQUESC_peat<-paste(dirname(proj.file), "/QUES/QUES-C/QUESC_peat_analysis_",as.character(peat_t1),"-",as.character(peat_t2), sep="")
-  dir.create(dirQUESC_peat, mode="0777")
-  setwd(dirQUESC_peat)
-  
-  text<-paste("QUESC_peat_emission_database_", peat_t1, "_", peat_t2, sep="")
-  write.dbf(data_merge2, paste(text, ".dbf", sep=""))
-  eval(parse(text=(paste(text, "<-data_merge2", sep=""))))
-  eval(parse(text=(paste("resave(", text, ', file="',proj.file, '")', sep=""))))
-  
-  #rtf report file
-  title<-"\\b\\fs40 LUMENS-QUES-C Peat Project Report\\b0\\fs20"
-  sub_title<-"\\b\\fs32 PERHITUNGAN EMISI PADA LAHAN GAMBUT\\b0\\fs20"
-  date<-paste("Date : ", date(), sep="")
-  time_start<-paste("Processing started : ", time_start, sep="")
-  time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
-  #area_name_rep<-paste("\\b", "\\fs20", Location, "\\b0","\\fs20")
-  line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-  rtffile <- RTF("LUMENS_QUES-C_PEAT_report.doc", font.size=9)
-  
-  # ==== Report 0. Cover=====
-  rtffile <- RTF("LUMENS_QUES-C_PEAT_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
-  # INPUT
-  img_location <- "C:/LUMENS_modified_scripts/Report/Slide2.PNG"
-  # loading the .png image to be edited
-  cover <- image_read(img_location)
-  # to display, only requires to execute the variable name, e.g.: "> cover"
-  # adding text at the desired location
-  text_submodule <- paste("Sub-Modul Karbon-Gambut\n\nAnalisis Dinamika Cadangan Karbon-Gambut\n", location, ", ", "Periode ", T1, "-", T2, sep="")
-  cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Helvetica")
-  cover_image <- image_write(cover_image)
-  # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
-  # 'location' defines the relative location of the text to the anchor defined in 'gravity'
-  # configure font type
-  addPng(rtffile, cover_image, width = 8.267, height = 11.692)
-  addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-  
-  addParagraph(rtffile, title)
-  addParagraph(rtffile, sub_title)
-  addNewLine(rtffile)
-  addParagraph(rtffile, line)
-  addParagraph(rtffile, date)
-  addParagraph(rtffile, time_start)
-  addParagraph(rtffile, time_end)
-  addParagraph(rtffile, line)
-  addNewLine(rtffile)
-  #addParagraph(rtffile, "Rekonsiliasi unit perencanaan adalah proses untuk menyelesaikan tumpang-tindih ijin dengan merujuk pada peta acuan/referensi fungsi. Rekonsiliasi dilakukan dengan menganalisa kesesuaian fungsi antara data-data ijin dengan data referensi. Data ijin yang dimaksud datapat berupa data konsesi pengelolaan hutan, ijin perkebunan, ijin tambang dan lain sebagainya, Sedangkan data referensi yang digunakan dapat berupa data rencana tata ruang atau penunjukan kawasan. ")
-  addNewLine(rtffile)
-  
-  addParagraph(rtffile, "\\b \\fs32 HASIL PERHITUNGAN EMISI GAMBUT\\b0 \\fs20")
-  addParagraph(rtffile, line)
-  #addParagraph(rtffile, "Pada bagian ini ditunjukkan hasil proses rekonsiliasi dengan menggunakan tambahan unit perencanaan ")
-  addNewLine(rtffile)
-  addNewLine(rtffile)
-  addNewLine(rtffile)
-  addParagraph(rtffile, "\\b \\fs18 Tabel Perhitungan Emisi Gambut Keseluruhan\\b0 \\fs18")
-  addNewLine(rtffile)
-  addTable(rtffile, overal_em)
-  addNewLine(rtffile)
-  addParagraph(rtffile, "\\b \\fs18 Tabel Perhitungan Emisi Gambut Pada Unit Perencanaan\\b0 \\fs18")
-  addNewLine(rtffile)
-  
-  addTable(rtffile, data_zone,  font.size=8)
-  addNewLine(rtffile)
-  addParagraph(rtffile, "\\b \\fs18 Tabel Perubahan Penggunaan Lahan Yang Menyebabkan Emisi Gambut\\b0 \\fs18")
-  addNewLine(rtffile)
-  
-  addTable(rtffile, source.cast2sel)
-  addNewLine(rtffile)
-  
-  done(rtffile)
-  
-  command<-paste("start ", "winword ", dirQUESC_peat, "/LUMENS_QUES-C_PEAT_report.doc", sep="" )
-  shell(command)
+# 4. saving idx
+resave(idx_factor, file = proj.file)
+resave(idx_lut, file = proj.file)
+
+# 5. define resultoutput
+resultoutput <- c(paste0(dirQUESC, "/Cpeat_sum_",planning_unit, "_", T_1, T_2, ".dbf"), paste0(dirQUESC, "/", data_ptmap, ".dbf"))
+resultoutput <- data.frame(PATH= resultoutput)
+# 5. Pass statusoutput
+statuscode<-1
+statusmessage<-"QUES-C peat analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
