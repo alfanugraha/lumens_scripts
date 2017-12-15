@@ -8,28 +8,36 @@
 ##sector_file=string
 ##labour_file=string
 ##unit=string
-##area_name=string
-##I_O_period= number 2000
 ##location=string
+##I_O_period= number 2000
+##statutoutput=output table
 
 library(reshape2)
 library(ggplot2)
 library(foreign)
 library(rtf)
+library(DBI)
+library(RPostgreSQL)
+library(rpostgis)
 library(magick)
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
-user_temp_folder<-Sys.getenv("TEMP")
-if(user_temp_folder=="") {
-  user_temp_folder<-Sys.getenv("TMP")
-}
-LUMENS_path_user <- paste(user_temp_folder,"/LUMENS/LUMENS.log", sep="")
-log.file<-read.table(LUMENS_path_user, header=FALSE, sep=",")
-working_dir<-paste(log.file[1,1], "/", log.file[1,2],"/TA/Single_IO", sep="")
-dir.create(working_dir)
+#=Load active project
+load(proj.file)
 
-#SET WORKING DIRECTORY
+# set driver connection
+driver <- dbDriver('PostgreSQL')
+project <- as.character(proj_descr[1,2])
+DB <- dbConnect(
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
+)
+
+#=Set Working Directory
+idx_TA_regeco<-idx_TA_regeco+1
+working_dir<-paste(dirname(proj.file), "/TA/Descriptive_Analysis", idx_TA_regeco, sep="")
+dir.create(working_dir, mode="0777")
 setwd(working_dir)
 
 #WRITING TA PROJECT FILE
@@ -58,19 +66,21 @@ cat(labour_file)
 cat("\n")
 cat(unit)
 cat("\n")
-cat(area_name)
+cat(location)
 cat("\n")
 cat(I_O_period)
 sink()
 
 #READ INPUT FILE
-int_con<- read.table(int_con_file, header=FALSE, sep=",")
-add_val<- read.table(add_val_file, header=FALSE, sep=",")
-fin_dem<- read.table(fin_dem_file, header=FALSE, sep=",")
-fin_dem_struc<- read.table(fin_dem_struc_file, header=FALSE, sep=",")
-add_val_struc<- read.table(add_val_struc_file, header=FALSE, sep=",")
-sector<- read.table(sector_file, header=FALSE, sep=",")
-labour<- read.table(labour_file, header=FALSE, sep=",")
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
+int_con <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==int_con_file),]
+add_val <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_file),]
+fin_dem <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_file),]
+fin_dem_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==fin_dem_struc_file),]
+add_val_struc <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==add_val_struc_file),]
+sector <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==sector_file),]
+labour <- list_of_data_lut[which(list_of_data_lut$TBL_NAME==labour_file),]
+
 int_con.m<-as.matrix(int_con)
 add_val.m<-as.matrix(add_val)
 dim<-ncol(int_con.m)
@@ -221,13 +231,13 @@ sel.multiplier<-sel.multiplier[ which(sel.multiplier$Inc.multiplier > 1),]
 #EXPORT OUTPUT
 Leontief_df<-as.data.frame(Leontief)
 Leontief_matrix<-"Leontief_matrix.dbf"
-write.dbf(Leontief_df, Leontief_matrix, factor2char = TRUE, max_nchar = 254)
+# write.dbf(Leontief_df, Leontief_matrix, factor2char = TRUE, max_nchar = 254)
 Linkages<-"Sectoral_linkages.dbf"
-write.dbf(Linkages_table, Linkages, factor2char = TRUE, max_nchar = 254)
+# write.dbf(Linkages_table, Linkages, factor2char = TRUE, max_nchar = 254)
 PDRB<-"Sectoral_GDP"
-write.dbf(GDP, PDRB,factor2char = TRUE, max_nchar = 254)
+# write.dbf(GDP, PDRB,factor2char = TRUE, max_nchar = 254)
 PENGGANDA<-"Sectoral_multiplier"
-write.dbf(multiplier, PENGGANDA,factor2char = TRUE, max_nchar = 254)
+# write.dbf(multiplier, PENGGANDA,factor2char = TRUE, max_nchar = 254)
 
 #WRITE REPORT
 title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
@@ -242,9 +252,10 @@ chapter2_1<-"\\b\\i\\fs20 Total GDP \\b0\\i0\\fs20"
 chapter3<-"\\b\\fs24 2.Analysis of multiplier \\b0\\fs20"
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("LUMENS_TA-1_SingleIO_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("TA-Descriptive_analysis_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide3.PNG"
+file.copy(paste0(LUMENS_path, "/ta_cover.png"), dirQUESC, recursive = FALSE)
+img_location<-paste0(dirQUESC, "/ta_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
@@ -258,11 +269,6 @@ cover_image <- image_write(cover_image)
 addPng(rtffile, cover_image, width = 8.267, height = 11.692)
 addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
 
-if (file.exists("C:/Program Files (x86)/LUMENS")){
-  addPng (rtffile, "C:/Program Files (x86)/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-} else{
-  addPng (rtffile, "C:/Program Files/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-}
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -315,3 +321,25 @@ addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,LMPL_graph)
 addParagraph(rtffile, "\\b\\fs20 Figure 5. Twenty sectors with highest Labour multiplier\\b0\\fs20.")
 done(rtffile)
+
+#=Save all params into .ldbase objects
+save(int_con,
+     add_val,
+     fin_dem,
+     fin_dem_struc,
+     add_val_struc,
+     sector,
+     labour,
+     unit,
+     location,
+     I_O_period,
+     Leontief_df,
+     GDP,
+     Linkages_table,
+     multiplier,
+     file=paste0('Descriptive', I_O_period, '.ldbase'))
+
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"QUES-C analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
