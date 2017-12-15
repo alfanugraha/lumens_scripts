@@ -1,4 +1,4 @@
-##QUES-PostgreSQL=group
+##SCIENDO-PostgreSQL=group
 ##proj.file=string
 ##landuse_1=string
 ##landuse_2=string
@@ -25,6 +25,13 @@ library(RPostgreSQL)
 library(rpostgis)
 library(splitstackshape)
 library(XML)
+
+proj.file="D:/LUMENS/trial/trial.lpj"
+landuse_1="lu00_48s_100m"
+landuse_2="lu05_48s_100m"
+planning_unit="pu_IDH_48s_100mT"
+lookup_lc="carbon"
+raster.nodata=0
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
@@ -251,3 +258,8 @@ command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', urlEgo
 system(command)
 
 resave(idx_SCIENDO_lucm, file=proj.file)
+
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"SCIENDO has completed successfully"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
