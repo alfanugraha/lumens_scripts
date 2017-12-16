@@ -6,7 +6,7 @@
 ##raster.nodata=number 0
 ##include_peat=selection Yes;No
 ##peatmap=string
-##peat_cell= numeric 1; allow more than 1 value to be entered at the same time
+##peat_cell= string
 ##lookup_c_peat=string
 ##resultoutput=output table
 ##statusoutput=output table
@@ -26,6 +26,10 @@ library(stringr)
 library(spatial.tools)
 library(rasterVis)
 library(foreign)
+
+# INPUT reading process
+peat_cell <- read.csv(peat_cell, header=FALSE, sep=",")
+peat_cell <- as.numeric(peat_cell[,1])
 
 # DEFINE FUNCTIONS====
 # 0. polygonize
