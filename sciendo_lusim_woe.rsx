@@ -1,30 +1,15 @@
 ##SCIENDO-PostgreSQL=group
 ##proj.file=string
 ##SCIENDO_LUCM_index=string
+##lc_lut=string
+##statusoutput=output table
 
-library(tiff)
-library(foreign)
-library(rasterVis)
-library(reshape2)
-library(plyr)
-library(lattice)
-library(latticeExtra)
-library(RColorBrewer)
-library(grid)
-library(ggplot2)
 library(spatial.tools)
-library(rtf)
-library(jsonlite)
 library(splitstackshape)
-library(stringr)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
-library(splitstackshape)
 library(XML)
-
-proj.file="D:/LUMENS/trial/trial.lpj"
-SCIENDO_LUCM_index="5_SCIENDO_lucm_2000_2005_pu_IDH_48s_100mT"
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
@@ -39,18 +24,21 @@ DB <- dbConnect(
   user=as.character(pgconf$user), password=as.character(pgconf$pass)
 )
 list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
-
-
-lookup_lc<-dbReadTable(DB, c("public", "in_lut1")) ##!!!!! THIS IS STILL IN ,HARDCODE CHECK WITH ALFA !!!!
+data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==lc_lut),]
+lusim_lc<-dbReadTable(DB, c("public", data_lut$TBL_DATA)) 
 
 #=Set working directory
 SCIENDO_folder<-SCIENDO_LUCM_index
 result_dir<-paste(dirname(proj.file),"/SCIENDO/", SCIENDO_folder, sep="")
 setwd(result_dir)
 factor_dir <- (paste(result_dir,"/factor/", sep=""))
-urlAddressRaster <- paste (result_dir,"/factor", sep="")
-urlDINAMICAConsole='C:/Program Files/Dinamica EGO/DinamicaConsole.exe'
-
+DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles"), "\\Dinamica EGO\\DinamicaConsole.exe")
+if (file.exists(DINAMICA_exe)){
+  urlDINAMICAConsole = DINAMICA_exe
+} else{
+  DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles(x86)"), "\\Dinamica EGO\\DinamicaConsole.exe")
+  urlDINAMICAConsole = DINAMICA_exe
+}
 
 ########################################################################################################################
 # CALCULATE WEIGHT OF EVIDENCE                                                                                         #
@@ -61,10 +49,9 @@ static_var$identifier<-paste('&quot;static_var/', static_var$aliasFactor, '&quot
 
 identifier<-do.call(paste, c(as.list(static_var$identifier), sep="        "))
 
-start <- as.numeric(lookup_lc[1,1])
-lenght <- as.numeric(nrow(lookup_lc))
-end <- as.numeric(lookup_lc[lenght,1])
-
+start <- as.numeric(lusim_lc[1,1])
+lenght <- as.numeric(nrow(lusim_lc))
+end <- as.numeric(lusim_lc[lenght,1])
 
 skeleton1<-data.frame(nT1=c(start:end), divider=lenght)
 skeleton1<-expandRows(skeleton1, 'divider')
@@ -239,16 +226,21 @@ con$closeTag("containerfunctor")
 
 # print(con$value())
 # write egoml
-saveXML(con$value(), file=paste(result_dir, "/3_Weight_of_Evidence_per_Region_3.egoml", sep=''))
+egoml_file=paste(result_dir, "/3_Weight_of_Evidence_per_Region.egoml", sep='')
+saveXML(con$value(), file=egoml_file)
 
-
-tx  <- readLines(paste(result_dir, "/3_Weight_of_Evidence_per_Region_3.egoml", sep=''))
-tx2  <- gsub(pattern = "amp;", replace = "", x = tx)
-writeLines(tx2, con=paste(result_dir, "/3_Weight_of_Evidence_per_Region_3r.egoml", sep=''))
+# replace ampersand code character
+egoml_text  <- readLines(egoml_file)
+egoml_text_new  <- gsub(pattern="amp;", replace="", x=egoml_text)
+writeLines(egoml_text_new, con=egoml_file)
 
 command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', result_dir, '/3_Weight_of_Evidence_per_Region_3r.egoml"', sep="")
 
 system(command)
+
+resave(lusim_lc, file=proj.file)
+dbDisconnect(DB)
+
 statuscode<-1
 statusmessage<-"SCIENDO has completed successfully"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)

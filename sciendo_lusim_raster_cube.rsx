@@ -2,31 +2,13 @@
 ##proj.file=string
 ##SCIENDO_LUCM_index=string
 ##factor_folder=string
+##statusoutput=output table
 
-library(tiff)
-library(foreign)
-library(rasterVis)
-library(reshape2)
-library(plyr)
-library(lattice)
-library(latticeExtra)
-library(RColorBrewer)
-library(grid)
-library(ggplot2)
 library(spatial.tools)
-library(rtf)
-library(jsonlite)
-library(splitstackshape)
-library(stringr)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
-library(splitstackshape)
 library(XML)
-
-proj.file="D:/LUMENS/trial/trial.lpj"
-factor_folder="D:/LUMENS/#LUMENS_finaltesting/4_Factor/"
-SCIENDO_LUCM_index="5_SCIENDO_lucm_2000_2005_pu_IDH_48s_100mT"
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
@@ -63,7 +45,14 @@ for (a in 1:nFactors) {
   aliasFactor<-c(aliasFactor,temp)
 }
 
-setwd(result_dir)
+DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles"), "\\Dinamica EGO\\DinamicaConsole.exe")
+if (file.exists(DINAMICA_exe)){
+  urlDINAMICAConsole = DINAMICA_exe
+} else{
+  DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles(x86)"), "\\Dinamica EGO\\DinamicaConsole.exe")
+  urlDINAMICAConsole = DINAMICA_exe
+}
+
 # begin writing tag
 con <- xmlOutputDOM(tag="script")
 # add property
@@ -121,10 +110,12 @@ con$closeTag("containerfunctor")
 # print(con$value())
 # write egoml
 saveXML(con$value(), file=paste(result_dir, "/2_Create_Raster_Cube.egoml", sep=''))
-urlDINAMICAConsole='C:/Program Files/Dinamica EGO/DinamicaConsole.exe'
 command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', result_dir, '/2_Create_Raster_Cube.egoml"', sep="")
 system(command)
 resave(aliasFactor, file=proj.file)
+
+dbDisconnect(DB)
+
 statuscode<-1
 statusmessage<-"SCIENDO has completed successfully"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)

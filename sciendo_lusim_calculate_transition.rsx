@@ -3,35 +3,13 @@
 ##landuse_1=string
 ##landuse_2=string
 ##planning_unit=string
-##raster.nodata=number 0
+##statusoutput=output table
 
-library(tiff)
-library(foreign)
-library(rasterVis)
-library(reshape2)
-library(plyr)
-library(lattice)
-library(latticeExtra)
-library(RColorBrewer)
-library(grid)
-library(ggplot2)
 library(spatial.tools)
-library(rtf)
-library(jsonlite)
-library(splitstackshape)
-library(stringr)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
-library(splitstackshape)
 library(XML)
-
-proj.file="D:/LUMENS/trial/trial.lpj"
-landuse_1="lu00_48s_100m"
-landuse_2="lu05_48s_100m"
-planning_unit="pu_IDH_48s_100mT"
-lookup_lc="carbon"
-raster.nodata=0
 
 time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
 
@@ -49,12 +27,10 @@ DB <- dbConnect(
 # return the selected data from the list
 list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
 list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
-list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
 
 data_luc1<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_1),]
 data_luc2<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_2),]
 data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==planning_unit),]
-data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==lookup_lc),]
 
 #=Set initial variables
 # time period
@@ -64,22 +40,22 @@ T2<-data_luc2$PERIOD
 #=Set working directory
 pu_name<-data_pu$RST_NAME
 idx_SCIENDO_lucm<-idx_SCIENDO_lucm+1
-SCIENDO_folder<-paste(idx_SCIENDO_lucm, "_SCIENDO_lucm_",T1,"_",T2,"_",pu_name,sep="")
-result_dir<-paste(dirname(proj.file),"/SCIENDO/", SCIENDO_folder, sep="")
+SCIENDO_folder<-paste(idx_SCIENDO_lucm, "_SCIENDO_lucm_", T1,"_", T2,"_", pu_name,sep="")
+result_dir<-paste(dirname(proj.file), "/SCIENDO/", SCIENDO_folder, sep="")
 dir.create(result_dir)
 
 dir.create(LUMENS_path_user, mode="0777")
-setwd(LUMENS_path_user)
+setwd(result_dir)
 
 #=Set initial variables
 # reference map
 ref.obj<-exists('ref')
-ref.path<-paste(dirname(proj.file), '/ref.tif', sep='')
+ref.path<-paste(dirname(proj.file), '/reference.tif', sep='')
 if(!ref.obj){
   if(file.exists(ref.path)){
     ref<-raster(ref.path)
   } else {
-    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
+    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'reference.tif')
   }
 }
 # planning unit
@@ -99,44 +75,27 @@ landuse1<-getRasterFromPG(pgconf, project, data_luc1$RST_DATA, paste(data_luc1$R
 # landuse second time period
 landuse2<-getRasterFromPG(pgconf, project, data_luc2$RST_DATA, paste(data_luc2$RST_DATA, '.tif', sep=''))
 
-#=Projection handling
-if (grepl("+units=m", as.character(ref@crs))){
-  print("Raster maps have projection in meter unit")
-  Spat_res<-res(ref)[1]*res(ref)[2]/10000
-  paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C will automatically generate data in Ha unit")
-} else if (grepl("+proj=longlat", as.character(ref@crs))){
-  print("Raster maps have projection in degree unit")
-  Spat_res<-res(ref)[1]*res(ref)[2]*(111319.9^2)/10000
-  paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C will automatically generate data in Ha unit")
-} else{
-  statuscode<-0
-  statusmessage<-"Raster map projection is unknown"
-  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
-  quit()
-}
-
-########################################################################################################################
-# LIBRARY                                                                                                              #
-########################################################################################################################
 transition_dir <- paste(result_dir,"/transition", sep="")
 dir.create(transition_dir)
 
-
 # set working directory, create new if it doesn't exist 
-setwd(result_dir)
 writeRaster(landuse1, filename="landuse_1.tif", format="GTiff", datatype='INT1U', overwrite=TRUE)
 writeRaster(landuse2, filename="landuse_2.tif", format="GTiff", datatype='INT1U', overwrite=TRUE)
 writeRaster(zone, filename="zone.tif", format="GTiff", datatype='INT1U', overwrite=TRUE)
 
 urlAddressRaster <- result_dir
 urlEgoml <- result_dir
-urlDINAMICAConsole='C:/Program Files/Dinamica EGO/DinamicaConsole.exe'
-timestep <- period2-period1
+timestep <- T2-T1
 
-########################################################################################################################
-# DETERMINE TRANSITION MATRIX                                                                                          #
-########################################################################################################################
+DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles"), "\\Dinamica EGO\\DinamicaConsole.exe")
+if (file.exists(DINAMICA_exe)){
+  urlDINAMICAConsole = DINAMICA_exe
+} else{
+  DINAMICA_exe<-paste0(Sys.getenv("ProgramFiles(x86)"), "\\Dinamica EGO\\DinamicaConsole.exe")
+  urlDINAMICAConsole = DINAMICA_exe
+}
 
+# DETERMINE TRANSITION MATRIX   
 setwd(urlEgoml)
 # begin writing tag
 con <- xmlOutputDOM(tag="script")
@@ -257,7 +216,11 @@ saveXML(con$value(), file=paste(urlEgoml, "/1_Transition_Matrix_per_Region.egoml
 command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', urlEgoml, '/1_Transition_Matrix_per_Region.egoml"', sep="")
 system(command)
 
-resave(idx_SCIENDO_lucm, file=proj.file)
+unlink(list.files(pattern = "in_"))
+list_of_idx_lusim<-data.frame(IDX_LUSIM=c(SCIENDO_folder))
+write.table(list_of_idx_lusim, paste0(dirname(proj.file), '/SCIENDO/list_of_idx_lusim.csv'), quote=FALSE, row.names=FALSE, sep=",")  
+resave(idx_SCIENDO_lucm, list_of_idx_lusim, file=proj.file)
+dbDisconnect(DB)
 
 #=Writing final status message (code, message)
 statuscode<-1
