@@ -4,7 +4,7 @@
 ##landuse_2=string
 ##planning_unit=string
 ##raster.nodata=number 0
-##include_peat=selection Yes;No
+#include_peat=selection Yes;No
 ##peatmap=string
 ##peat_cell= string
 ##lookup_c_peat=string

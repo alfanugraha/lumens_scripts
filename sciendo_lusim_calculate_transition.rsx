@@ -217,8 +217,17 @@ command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', urlEgo
 system(command)
 
 unlink(list.files(pattern = "in_"))
-list_of_idx_lusim<-data.frame(IDX_LUSIM=c(SCIENDO_folder))
-write.table(list_of_idx_lusim, paste0(dirname(proj.file), '/SCIENDO/list_of_idx_lusim.csv'), quote=FALSE, row.names=FALSE, sep=",")  
+new_idx_lusim<-data.frame(IDX_LUSIM=c(SCIENDO_folder))
+idx_lusim_file<-paste0(dirname(proj.file), '/SCIENDO/list_of_idx_lusim.csv')
+if(file.exists(idx_lusim_file)){
+  list_of_idx_lusim<-read.table(idx_lusim_file, header=TRUE, sep=",")
+  list_of_idx_lusim<-rbind(list_of_idx_lusim, new_idx_lusim)
+} else if(exists('list_of_idx_lusim')){
+  list_of_idx_lusim<-rbind(list_of_idx_lusim, new_idx_lusim)
+} else {
+  list_of_idx_lusim<-new_idx_lusim
+  write.table(list_of_idx_lusim, paste0(dirname(proj.file), '/SCIENDO/list_of_idx_lusim.csv'), quote=FALSE, row.names=FALSE, sep=",")  
+}
 resave(idx_SCIENDO_lucm, list_of_idx_lusim, file=proj.file)
 dbDisconnect(DB)
 
