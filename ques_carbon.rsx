@@ -84,11 +84,11 @@ if(!ref.obj){
   }
 }
 # peat
-if (include_peat == 1){
-  data_peat<-list_of_data_pu[which(list_of_data_pu$RST_NAME==peatmap),]
-  peat<-getRasterFromPG(pgconf, project, data_peat$RST_DATA, paste(data_peat$RST_DATA, '.tif', sep=''))
-  lookup_peat<-dbReadTable(DB, c("public", data_peat$LUT_NAME)) 
-}
+# if (include_peat == 1){
+#   data_peat<-list_of_data_pu[which(list_of_data_pu$RST_NAME==peatmap),]
+#   peat<-getRasterFromPG(pgconf, project, data_peat$RST_DATA, paste(data_peat$RST_DATA, '.tif', sep=''))
+#   lookup_peat<-dbReadTable(DB, c("public", data_peat$LUT_NAME)) 
+# }
 # planning unit
 if (data_pu$RST_DATA=="ref") {
   zone<-ref

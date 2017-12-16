@@ -4,7 +4,7 @@
 ##landuse_2=string
 ##planning_unit=string
 ##raster.nodata=number 0
-##include_peat=selection Yes;No
+#include_peat=selection Yes;No
 ##peatmap=string
 ##peat_cell= string
 ##lookup_c_peat=string
@@ -439,7 +439,7 @@ list_of_data_f <- dbReadTable(DB, c("public", "list_of_data_f"))
 write.csv(list_of_data_f, paste0(LUMENS_path_user, "/list_of_data_f.csv"), row.names = FALSE)
 # write the raster file in targeted directory as well as the .qml for value visualization
 pt_pal <- c("#223BF8","#A0FD01","#FF6001")
-writeRastFile(p.em_map, data_ptmap, colorpal = pt_pal)
+writeRastFile(em_map, data_ptmap, colorpal = pt_pal)
 # add teci map into the postgre database
 addRasterToPG(project, paste0(data_ptmap, ".tif"), paste0("factor", idx_factor), srid)
 
