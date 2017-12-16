@@ -234,7 +234,7 @@ egoml_text  <- readLines(egoml_file)
 egoml_text_new  <- gsub(pattern="amp;", replace="", x=egoml_text)
 writeLines(egoml_text_new, con=egoml_file)
 
-command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', result_dir, '/3_Weight_of_Evidence_per_Region_3r.egoml"', sep="")
+command<-paste('"', urlDINAMICAConsole, '" -processors 0 -log-level 4 "', result_dir, '/3_Weight_of_Evidence_per_Region.egoml"', sep="")
 
 system(command)
 
