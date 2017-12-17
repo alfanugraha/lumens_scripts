@@ -1,7 +1,15 @@
-##[TA]=group
-##npv_lookup=file
+##TA-PostgreSQL=group
+##proj.file=string
+##landuse_1=string
+##landuse_2=string
+##planning_unit=string
+##lookup_c=string
+##lookup_npv=string
+##raster.nodata=number 0
+#resultoutput=output table
+##statusoutput=output table
 
-library(SDMTools)
+#=Load library
 library(tiff)
 library(foreign)
 library(rasterVis)
@@ -10,180 +18,102 @@ library(plyr)
 library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
-library(hexbin)
 library(grid)
 library(ggplot2)
 library(spatial.tools)
 library(rtf)
+library(splitstackshape)
+library(stringr)
+library(DBI)
+library(RPostgreSQL)
+library(rpostgis)
+library(magick)
 
-#READ LUMENS LOG FILE
-user_temp_folder<-Sys.getenv("TEMP")
-if(user_temp_folder=="") {
-  user_temp_folder<-Sys.getenv("TMP")
-}
-LUMENS_path_user <- paste(user_temp_folder,"/LUMENS/LUMENS.log", sep="")
-LUMENS_temp_user <- paste(user_temp_folder,"/LUMENS/temp", sep="")
-dir.create(LUMENS_temp_user, mode="0777")
-log.file<-read.table(LUMENS_path_user, header=FALSE, sep=",")
-proj.file<-paste(log.file[1,1], "/", log.file[1,2],"/",log.file[1,2], ".lpj", sep="")
+time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
+
+#=Load active project
 load(proj.file)
 
-#====READ LANDUSE DATA FROM LUMENS DATABASE====
-per<-as.data.frame(ls(pattern="freq"))
-n<-nrow(per)
-if(n==0){
-  msgBox <- tkmessageBox(title = "TA",
-                         message = "No Land Use/Cover found",
-                         icon = "info",
-                         type = "ok")
-  quit()
-}
-data<-per
-data.y<-NULL
-for (q in 1:n) {
-  data.x<-substr(as.character(factor(data[q,1])), 5, 14)
-  data.y<-c(data.y,data.x)
-  
-}
-data<-as.data.frame(data.y)
+# set driver connection
+driver <- dbDriver('PostgreSQL')
+project <- as.character(proj_descr[1,2])
+DB <- dbConnect(
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
+)
 
-n<-nrow(data)
-command1<-NULL
-command2<-NULL
-for(i in 1:n) {
-  if (i!=n){
-    command1<-paste(command1,"period", i, ",", sep="")
-    command2<-paste(command2,"landuse_t", i, ",", sep="")
+#=Retrieve all list of data that are going to be used
+# list_of_data_luc ==> list of data land use/cover 
+# list_of_data_pu ==> list of data planning unit
+# list_of_data_f ==> list of data factor
+# list_of_data_lut ==> list of data lookup table
+list_of_data_luc<-dbReadTable(DB, c("public", "list_of_data_luc"))
+list_of_data_pu<-dbReadTable(DB, c("public", "list_of_data_pu"))
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
+# return the selected data from the list
+data_luc1<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_1),]
+data_luc2<-list_of_data_luc[which(list_of_data_luc$RST_NAME==landuse_2),]
+data_pu<-list_of_data_pu[which(list_of_data_pu$RST_NAME==planning_unit),]
+data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==lookup_c),]
+data_npv<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==lookup_npv),]
+
+T1<-data_luc1$PERIOD
+T2<-data_luc2$PERIOD
+
+#=Set Working Directory
+pu_name<-data_pu$RST_DATA 
+idx_TA_opcost<-idx_TA_opcost+1
+working_directory<-paste(dirname(proj.file), "/TA/", idx_TA_opcost, "_OpCost_", T1, "_", T2, "_", pu_name, sep="")
+dir.create(working_directory, mode="0777")
+
+# create temp directory
+dir.create(LUMENS_path_user, mode="0777")
+setwd(LUMENS_path_user)
+
+#=Set initial variables
+# reference map
+ref.obj<-exists('ref')
+ref.path<-paste(dirname(proj.file), '/ref.tif', sep='')
+if(!ref.obj){
+  if(file.exists(ref.path)){
+    ref<-raster(ref.path)
   } else {
-    command1<-paste(command1,"period", i, sep="")
-    command2<-paste(command2,"landuse_t", i, sep="")
+    ref<-getRasterFromPG(pgconf, project, 'ref_map', 'ref.tif')
   }
 }
 
-#if pu is not exist, use p.admin.df as planning unit reference
-data2<-as.data.frame(as.character(ls(pattern="pu_pu")))
-n_pu<-nrow(data2)
-if (n_pu==0) {
-  msgBox <- tkmessageBox(title = "TA",
-                         message = "No planning unit found. Do you want to use administrative boundary as planning unit?",
-                         icon = "question", 
-                         type = "yesno", default="yes")
-  if(as.character(msgBox)=="no"){
-    quit()
-  }
-  ref[ref==0]<-NA
-  lut.pu<-p.admin.df[2]
-  lut.pu[2]<-p.admin.df[1]
-  pu<-"ref"
+# planning unit
+if (data_pu$RST_DATA=="ref") {
+  zone<-ref
+  count_ref<-as.data.frame(freq(ref))
+  count_ref<-na.omit(count_ref)
+  colnames(count_ref)<-c("IDADM", "COUNT")
+  ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
+  lookup_z<-merge(count_ref, ref_table, by="IDADM")
 } else {
-  command3<-NULL
-  for(i in 1:n_pu) {
-    if (i!=n_pu){
-      command3a<-eval(parse(text=(paste( "names(pu_pu", i, ")", sep=""))))
-      command3<-c(command3,command3a)
-    } else {
-      command3a<-eval(parse(text=(paste( "names(pu_pu", i, ")", sep=""))))
-      command3<-c(command3,command3a)
-    }
-  }
+  zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
+  lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
 }
+# landuse first time period
+landuse1<-getRasterFromPG(pgconf, project, data_luc1$RST_DATA, paste(data_luc1$RST_DATA, '.tif', sep=''))
+# landuse second time period
+landuse2<-getRasterFromPG(pgconf, project, data_luc2$RST_DATA, paste(data_luc2$RST_DATA, '.tif', sep=''))
+# landcover lookup table
+lookup_c<-dbReadTable(DB, c("public", data_lut$TBL_DATA)) 
+lookup_npv<-dbReadTable(DB, c("public", data_npv$TBL_DATA))
+# set lookup table
+lookup_c<-lookup_c[which(lookup_c[1] != raster.nodata),]
+lookup_npv<-lookup_npv[which(lookup_npv[1] != raster.nodata),]
+lookup_lc<-lookup_c
+lookup_ref<-lut_ref
+colnames(lookup_lc)<-c("ID","LC","CARBON")
+colnames(lookup_z)<-c("ID", "COUNT_ZONE", "ZONE")
+colnames(lookup_npv)<-c("ID", "LC", "NPV")
 
-rr<-nrow(per)
-command4<-NULL
-for(i in 1:rr) {
-  if (i!=rr){
-    command4<-paste(command4,"freqLanduse_", i, ",", sep="")
-  } else {
-    command4<-paste(command4,"freqLanduse_", i, sep="")
-  }
-}
-#end create command
+nLandCoverId<-nrow(lookup_lc)
+nPlanningUnitId<-nrow(lookup_z)
 
-#====SELECT DATA TO BE ANALYZED====
-eval(parse(text=(paste("year<-c(", command1, ")", sep=""))))
-data<-as.data.frame(cbind(data,year))
-data$t1<-0
-data$t2<-0
-colnames(data)[1]<-"data"
-data$data<-as.character(data$data)
-data3<-data
-a<-nrow(data3)
-repeat{
-  data_temp<-edit(data)
-  if(sum(data_temp$t1)==1 & sum(data_temp$t2)==1){
-    data_temp$sum<-data_temp$t1+data_temp$t2
-    data_temp <- data_temp[which(data_temp$sum==1),]
-    n_temp<-nrow(data_temp)
-    if(n_temp!=0) {
-      data<-data_temp
-      break  
-    }
-  } else {
-    msgBox <- tkmessageBox(title = "Pre-QUES",
-                           message = "Choose data to be analyzed. Retry?",
-                           icon = "question", 
-                           type = "retrycancel", default="retry")
-    if(as.character(msgBox)=="cancel"){
-      quit()
-    }
-  }
-}
-
-data$t1<-NULL
-data$t2<-NULL
-data$sum<-NULL
-
-n<-nrow(data)
-command1<-NULL
-T1<-data[1,2]
-T2<-data[2,2]
-
-#====SELECT PLANNING UNIT TO BE ANALYZED====
-if(n_pu!=0){
-  data2<-as.data.frame(cbind(data2,command3))
-  data2$usage<-0
-  colnames(data2)[1]<-"data"
-  colnames(data2)[2]<-"sources"
-  data2$data<-as.character(data2$data)
-  data2$sources<-as.character(data2$sources)
-  data2<-rbind(data2, c("ref", "Administrative", 0))
-  data2$usage<-as.integer(data2$usage)  
-  repeat{
-    data2<-edit(data2)
-    if(sum(data2$usage)==1){
-      break
-    } else {
-      msgBox <- tkmessageBox(title = "Pre-QUES",
-                             message = "Choose one data as a planning unit. Retry?",
-                             icon = "question", 
-                             type = "retrycancel", default="retry")
-      if(as.character(msgBox)=="cancel"){
-        quit()
-      }
-    }
-  } 
-  data2 <- data2[which(data2$usage==1),]
-  data2$usage<-NULL
-  pu<-as.character(data2[1,1])
-  if(pu=="ref"){
-    ref[ref==0]<-NA
-    lut.pu<-p.admin.df[2]
-    lut.pu[2]<-p.admin.df[1]
-    pu_selected<-0
-  } else {
-    pu_selected<-substr(pu, 6, 7)
-    eval(parse(text=(paste("lut.pu<-lut.pu", pu_selected, sep=""))))
-  }
-}
-
-#====PROJECTION HANDLING====
-for(j in 1:n) {
-  input <- as.character(data[j,1])
-  eval(parse(text=(paste(input,"[",input, "==", raster.nodata, "]<-NA", sep=""))))
-  command1<-paste(command1,input, ",", sep="")
-}
-
-#====projection handling====
+#=Projection handling
 if (grepl("+units=m", as.character(ref@crs))){
   print("Raster maps have projection in meter unit")
   Spat_res<-res(ref)[1]*res(ref)[2]/10000
@@ -193,46 +123,108 @@ if (grepl("+units=m", as.character(ref@crs))){
   Spat_res<-res(ref)[1]*res(ref)[2]*(111319.9^2)/10000
   paste("Raster maps have ", Spat_res, " Ha spatial resolution, QuES-C will automatically generate data in Ha unit")
 } else{
-  msgBox <- tkmessageBox(title = "QUES",
-                         message = "Raster map projection is unknown",
-                         icon = "info",
-                         type = "ok")
+  statuscode<-0
+  statusmessage<-"Raster map projection is unknown"
+  statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
   quit()
 }
 
-#====Load Datasets====
-setwd(LUMENS_temp_user)
-ref_name<-names(ref)
-writeRaster(ref, filename="ref.tif", format="GTiff", overwrite=TRUE)
-ref<-raster("ref.tif")
-names(ref)<-ref_name
-
-eval(parse(text=(paste("landuse1<-", data[1,1], sep=""))))
-eval(parse(text=(paste("landuse2<-", data[2,1], sep=""))))
-eval(parse(text=(paste("zone<-", data2[1,1],sep=""))))
-
-#====Load Lookup Tables====
-lookup_c<- lut.c
-lookup_z <- lut.pu
-lookup_lc<-lookup_c
-colnames(lookup_lc)<-c("ID","LC","CARBON")
-colnames(lookup_z)<-c("ID", "Z_NAME")
-
-#====Set Project Properties====
+#=Set project properties
 title=location
 tab_title<-as.data.frame(title)
-period1=data[1,2]
-period2=data[2,2]
+period1=T1
+period2=T2
 period=period2-period1
 proj_prop<-as.data.frame(title)
 proj_prop$period1<-period1
 proj_prop$period2<-period2
 proj_prop$period <- do.call(paste, c(proj_prop[c("period1", "period2")], sep = " - "))
 
-#====Carbon Accounting Process====
-rcl.m.c1<-as.matrix(lookup_c[,1])
-rcl.m.c2<-as.matrix(lookup_c[,3])
+#=Create cross-tabulation for zone
+xtab<-tolower(paste('xtab_', pu_name, T1, T2, sep=''))
+data_xtab<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==xtab),]
+if(nrow(data_xtab)==0){
+  dummy1<-data.frame(nPU=lookup_z$ID, divider=nLandCoverId*nLandCoverId)
+  dummy1<-expandRows(dummy1, 'divider')
+  
+  dummy2<-data.frame(nT1=lookup_lc$ID, divider=nLandCoverId)
+  dummy2<-expandRows(dummy2, 'divider')
+  dummy2<-data.frame(nT1=rep(dummy2$nT1, nPlanningUnitId))
+  
+  dummy3<-data.frame(nT2=rep(rep(lookup_lc$ID, nLandCoverId), nPlanningUnitId))
+  
+  landUseChangeMapDummy<-cbind(dummy1, dummy2, dummy3)
+  colnames(landUseChangeMapDummy)<-c('ZONE', 'ID_LC1', 'ID_LC2')
+  
+  R2<-(zone*1) + (landuse1*100^1)+ (landuse2*100^2) 
+  lu.db<-as.data.frame(freq(R2))
+  lu.db<-na.omit(lu.db)
+  n<-3
+  k<-0
+  lu.db$value_temp<-lu.db$value
+  while(k < n) {
+    eval(parse(text=(paste("lu.db$Var", n-k, "<-lu.db$value_temp %% 100", sep=""))))  
+    lu.db$value_temp<-floor(lu.db$value_temp/100)
+    k=k+1
+  }
+  lu.db$value_temp<-NULL
+  colnames(lu.db) = c("ID_CHG", "COUNT", "ZONE", "ID_LC1", "ID_LC2")
+  lu.db<-merge(landUseChangeMapDummy, lu.db, by=c('ZONE', 'ID_LC1', 'ID_LC2'), all=TRUE)
+  lu.db$ID_CHG<-lu.db$ZONE*1 + lu.db$ID_LC1*100^1 + lu.db$ID_LC2*100^2
+  lu.db<-replace(lu.db, is.na(lu.db), 0)
+  
+  idx_lut<-idx_lut+1
+  eval(parse(text=(paste("in_lut", idx_lut, " <- lu.db", sep=""))))
+  
+  eval(parse(text=(paste("list_of_data_lut<-data.frame(TBL_DATA='in_lut", idx_lut,"', TBL_NAME='", xtab, "', row.names=NULL)", sep=""))))
+  # save to PostgreSQL
+  InLUT_i <- paste('in_lut', idx_lut, sep="")
+  dbWriteTable(DB, InLUT_i, eval(parse(text=(paste(InLUT_i, sep="" )))), append=TRUE, row.names=FALSE)
+  dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FALSE)
+  
+  setwd(working_directory)
+  idx_factor<-idx_factor+1
+  chg_map<-tolower(paste('chgmap_', pu_name, T1, T2, sep=''))
+  eval(parse(text=(paste("writeRaster(R2, filename='", chg_map, ".tif', format='GTiff', overwrite=TRUE)", sep=""))))
+  eval(parse(text=(paste("factor", idx_factor, "<-'", chg_map, "'", sep=''))))  
+  eval(parse(text=(paste("list_of_data_f<-data.frame(RST_DATA='factor", idx_factor,"', RST_NAME='", chg_map, "', row.names=NULL)", sep=""))))  
+  InFactor_i <- paste("factor", idx_factor, sep="")  
+  dbWriteTable(DB, "list_of_data_f", list_of_data_f, append=TRUE, row.names=FALSE)
+  #write to csv
+  list_of_data_f<-dbReadTable(DB, c("public", "list_of_data_f"))
+  csv_file<-paste(dirname(proj.file),"/csv_factor_data.csv", sep="")
+  write.table(list_of_data_f, csv_file, quote=FALSE, row.names=FALSE, sep=",")  
+  addRasterToPG(project, paste0(chg_map, '.tif'), InFactor_i, srid)
+  unlink(paste0(chg_map, '.tif'))
+} else {
+  lu.db<-dbReadTable(DB, c("public", data_xtab$TBL_DATA))
+}
+# rename column
+colnames(lookup_c) = c("ID_LC1", "LC_t1", "CARBON_t1")
+data_merge <- merge(lu.db,lookup_c,by="ID_LC1")
+colnames(lookup_c) = c("ID_LC2", "LC_t2", "CARBON_t2")
+data_merge <- as.data.frame(merge(data_merge,lookup_c,by="ID_LC2"))
+colnames(lookup_z)[1]="ZONE"
+colnames(lookup_z)[3]="Z_NAME"
+data_merge <- as.data.frame(merge(data_merge,lookup_z,by="ZONE"))
+#data_merge <- as.data.frame(merge(data_merge,lookup_ref,by="REF"))
+data_merge$COUNT<-data_merge$COUNT*Spat_res
+data_merge$COUNT_ZONE<-data_merge$COUNT_ZONE*Spat_res
+#save crosstab
+# original_data<-subset(data_merge, select=-c(CARBON_t1, CARBON_t2))
+# eval(parse(text=(paste("write.dbf(original_data, 'lu.db_", pu_name ,"_", T1, "_", T2, ".dbf')", sep="")))) 
+# rm(lu.db, original_data)
+#calculate area based on reference/administrative data
+# refMelt<-melt(data = ref.db, id.vars=c('REF'), measure.vars=c('COUNT'))
+# refArea<-dcast(data = refMelt, formula = REF ~ ., fun.aggregate = sum)
+
+#=Carbon accounting process
+NAvalue(landuse1)<-raster.nodata
+NAvalue(landuse2)<-raster.nodata
+rcl.m.c1<-as.matrix(lookup_lc[,1])
+rcl.m.c2<-as.matrix(lookup_lc[,3])
 rcl.m<-cbind(rcl.m.c1,rcl.m.c2)
+rcl.m<-rbind(rcl.m, c(0, NA))
 carbon1<-reclassify(landuse1, rcl.m)
 carbon2<-reclassify(landuse2, rcl.m)
 chk_em<-carbon1>carbon2
@@ -240,104 +232,9 @@ chk_sq<-carbon1<carbon2
 emission<-((carbon1-carbon2)*3.67)*chk_em
 sequestration<-((carbon2-carbon1)*3.67)*chk_sq
 
-#===CHECK EXISTING RASTER BRICK OR CROSSTAB====
-setwd(LUMENS_temp_user)
-command1<-paste(command1,pu, sep="")
-eval(parse(text=(paste("pu_name<-names(",pu[1],")", sep=''))))
-check_lucdb<-FALSE
-eval(parse(text=(paste("check_crosstab<-file.exists('lu.db_", pu_name ,"_", T1, "_", T2, ".dbf')", sep="")))) 
-eval(parse(text=(paste("check_rbrick<-file.exists('r.brick_", pu_name ,"_", T1, "_", T2, ".grd')", sep=""))))  
-if(check_crosstab){
-  eval(parse(text=(paste("data_merge<-read.dbf('lu.db_", pu_name ,"_", T1, "_", T2, ".dbf')", sep="")))) 
-  #eval(parse(text=(paste("lu.db<-read.dbf('lu.db_", pu_name ,"_", T1, "_", T2, ".dbf')", sep=""))))
-} else if(check_rbrick){
-  eval(parse(text=(paste("r.brick<-brick('r.brick_", pu_name ,"_", T1, "_", T2, ".grd')", sep=""))))
-  lu.db<-crosstab(r.brick,long=TRUE,useNA=FALSE,progress='-')
-  check_lucdb<-TRUE
-} else {
-  eval(parse(text=(paste("r.brick<-brick(stack(", command1, "), filename='r.brick_",pu_name,"_",T1, "_", T2, "')", sep=""))))
-  lu.db<-crosstab(r.brick,long=TRUE,useNA=FALSE,progress='-')
-  check_lucdb<-TRUE
-}
-
-refStack<-brick(landuse1,landuse2, ref)
-refCross<-as.data.frame(crosstab(refStack,long=TRUE,useNA=FALSE,progress='-'))
-colnames(refCross)[1] ="ID_LC1"
-colnames(refCross)[2] = "ID_LC2"
-colnames(refCross)[3] = "ZONE"
-colnames(refCross)[4] = "COUNT"
-refCross$COUNT<-refCross$COUNT*Spat_res
-colnames(lookup_c)[1]="ID_LC1"
-colnames(lookup_c)[2]="LC_t1"
-colnames(lookup_c)[3]="CARBON_t1"
-refDB <- merge(refCross,lookup_c,by="ID_LC1")
-colnames(lookup_c)[1]="ID_LC2"
-colnames(lookup_c)[2]="LC_t2"
-colnames(lookup_c)[3]="CARBON_t2"
-refDB <- as.data.frame(merge(refDB,lookup_c,by="ID_LC2"))
-colnames(lookup_z)[1]="ZONE"
-colnames(lookup_z)[2]="Z_NAME"
-refDB <- as.data.frame(merge(refDB,lookup_z,by="ZONE"))
-refMelt<-melt(data = refDB, id.vars=c('ZONE'), measure.vars=c('COUNT'))
-refArea<-dcast(data = refMelt, formula = ZONE ~ ., fun.aggregate = sum)
-
-if(check_lucdb) {
-  colnames(lu.db)[1] ="ID_LC1"
-  colnames(lu.db)[2] = "ID_LC2"
-  colnames(lu.db)[3] = "ZONE"
-  colnames(lu.db)[4] = "COUNT"
-  colnames(lookup_c)[1]="ID_LC1"
-  colnames(lookup_c)[2]="LC_t1"
-  colnames(lookup_c)[3]="CARBON_t1"
-  data_merge <- merge(lu.db,lookup_c,by="ID_LC1")
-  
-  colnames(lookup_c)[1]="ID_LC2"
-  colnames(lookup_c)[2]="LC_t2"
-  colnames(lookup_c)[3]="CARBON_t2"
-  data_merge <- as.data.frame(merge(data_merge,lookup_c,by="ID_LC2"))
-  
-  colnames(lookup_z)[1]="ZONE"
-  colnames(lookup_z)[2]="Z_NAME"
-  data_merge <- as.data.frame(merge(data_merge,lookup_z,by="ZONE"))
-  
-  original_data<-subset(data_merge, select=-c(CARBON_t1, CARBON_t2))
-  eval(parse(text=(paste("write.dbf(original_data, 'lu.db_", pu_name ,"_", T1, "_", T2, ".dbf')", sep="")))) 
-  rm(lu.db, original_data)
-} else {
-  carbon_table <- subset(lookup_lc, select=-LC)
-  colnames(carbon_table)[1]="ID_LC1"
-  colnames(carbon_table)[2]="CARBON_t1"
-  data_merge <- merge(data_merge,carbon_table,by="ID_LC1") 
-  colnames(carbon_table)[1]="ID_LC2"
-  colnames(carbon_table)[2]="CARBON_t2"
-  data_merge <- merge(data_merge,carbon_table,by="ID_LC2") 
-}
-
-
-#====CREATE FOLDER AND WORKING DIRECTORY====
-TA1.index=TA1.index+1
-hist_folder<-paste("OpCostMap_", pu_name,"_", T1,"_",T2,"_",TA1.index,sep="")
-working_directory<-paste(dirname(proj.file),"/TA/", sep="")
-setwd(working_directory)
-dir.create(hist_folder)
-
-working_directory<-paste(working_directory, hist_folder, sep='')
-setwd(working_directory)
-
-# load look up tables
-lookup_n <- read.table(npv_lookup, header=TRUE, sep=",")
-
-# create raster attribute table usign land cover file look up table
-levels(landuse1)<-merge((levels(landuse1)),lookup_n,by="ID")
-levels(landuse2)<-merge((levels(landuse2)),lookup_n,by="ID")
-levels(zone) <- merge(area_zone,lookup_z,by="ID")
-area_lc1<-as.data.frame(levels(landuse1))
-area_lc2<-as.data.frame(levels(landuse2))
-area_zone<-as.data.frame(levels(zone))
-
 #====NPV Accounting Process====
-rcl.m.npv1<-as.matrix(lookup_n[,1])
-rcl.m.npv2<-as.matrix(lookup_n[,3])
+rcl.m.npv1<-as.matrix(lookup_npv[,1])
+rcl.m.npv2<-as.matrix(lookup_npv[,3])
 rcl.m.npv<-cbind(rcl.m.npv1,rcl.m.npv2)
 npv1<-reclassify(landuse1, rcl.m.npv)
 npv2<-reclassify(landuse2, rcl.m.npv)
@@ -355,17 +252,26 @@ opcosttiff<-opcost
 
 #WRITE REPORT
 title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
-sub_title<-"\\b\\fs28 Sub-modules 1: Opportunity Cost Map \\b0\\fs20"
+sub_title<-"\\b\\fs28 Sub modul 1: Opportunity Cost Map \\b0\\fs20"
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 chapter1<-"\\b\\fs24 1.Carbon stock maps \\b0\\fs20"
 chapter2<-"\\b\\fs24 2.NPV maps \\b0\\fs20"
 chapter3<-"\\b\\fs24 3.Opportunity cost maps \\b0\\fs20"
-rtffile <- RTF("LUMENS_TA-1_report.lpr", font.size=9)
-if (file.exists("C:/Program Files (x86)/LUMENS")){
-  addPng (rtffile, "C:/Program Files (x86)/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-} else{
-  addPng (rtffile, "C:/Program Files/LUMENS/lumens_header_report.png", width=6.43, height=0.43)
-}
+rtffile <- RTF("TA-Opportunity_cost_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+img_location <- paste0(LUMENS_path, "/ta_cover.png")
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul TA\n\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)
@@ -420,3 +326,11 @@ addNewLine(rtffile)
 
 done(rtffile)
 
+resave(idx_TA_opcost, file=proj.file)
+
+dbDisconnect(DB)
+
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"QUES-C analysis successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)

@@ -24,8 +24,8 @@ load(proj.file)
 driver <- dbDriver('PostgreSQL')
 project <- as.character(proj_descr[1,2])
 DB <- dbConnect(
-  driver, dbname=project, host='localhost', port=5433,
-  user='postgres', password='root'
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
 )
 
 #=Retrieve all list of data that are going to be used

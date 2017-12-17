@@ -1,12 +1,12 @@
-##[TA]=group
+##TA-PostgreSQL=group
 ##NPV=file
+##ques_c_db=string
 ##cost_threshold=number 2
-##TA_opcost_database=output table
-##report
+##statusoutput=output table
 
-library(pander)
-library(knitr)
-library(markdown)
+# library(pander)
+# library(knitr)
+# library(markdown)
 library(rasterVis)
 library(reshape2)
 library(plyr)
@@ -18,82 +18,41 @@ library(grid)
 library(ggplot2)
 library(foreign)
 library(scales)
-library(tcltk)
 
-user_temp_folder<-Sys.getenv("TEMP")
-if(user_temp_folder=="") {
-  user_temp_folder<-Sys.getenv("TMP")
-}
-LUMENS_path_user <- paste(user_temp_folder,"/LUMENS/LUMENS.log", sep="")
-log.file<-read.table(LUMENS_path_user, header=FALSE, sep=",")
-proj.file<-paste(log.file[1,1], "/", log.file[1,2],"/",log.file[1,2], ".lpj", sep="")
+
+time_start<-paste(eval(parse(text=(paste("Sys.time ()")))), sep="")
+
+#=Load active project
 load(proj.file)
 
-#====READ QUES-C DB FROM LUMENS DB====
-quesc_list<-as.data.frame(ls(pattern="QUESC_database_"))
-n<-nrow(quesc_list)
-if(n==0){
-  msgBox <- tkmessageBox(title = "SCIENDO",
-                         message = "No QUES-C database found",
-                         icon = "info",
-                         type = "ok")
-  quit()
-}
-data.y<-NULL
-data.w<-NULL
-for (q in 1:n) {
-  n_dta<-nchar(as.character(factor(quesc_list[q,1])))
-  data.x<-substr(as.character(factor(quesc_list[q,1])), (n_dta-8), (n_dta-5))
-  data.z<-substr(as.character(factor(quesc_list[q,1])), (n_dta-3), n_dta)
-  if(data.z > data.x){
-    data.y<-c(data.y,data.x)
-    data.w<-c(data.w,data.z)
-  } else {
-    data.y<-c(data.y,data.z)
-    data.w<-c(data.w,data.x)
-  }
-}
-qdata<-as.data.frame(cbind(data.y,data.w))
+# set driver connection
+driver <- dbDriver('PostgreSQL')
+project <- as.character(proj_descr[1,2])
+DB <- dbConnect(
+  driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
+  user=as.character(pgconf$user), password=as.character(pgconf$pass)
+)
 
-#====SELECT QUES-C DATABASE TO BE ANALYZED====
-quesc_list$usage<-0
-colnames(quesc_list)[1]="database"
-repeat{
-  quesc_list<-edit(quesc_list)
-  if(sum(quesc_list$usage)==1){
-    break
-  } else {
-    msgBox <- tkmessageBox(title = "Based on period",
-                           message = "Choose one QUES-C database. Retry?",
-                           icon = "question",
-                           type = "retrycancel", default="retry")
-    if(as.character(msgBox)=="cancel"){
-      quit()
-    }
-  }
-}
-qdata<-cbind(quesc_list,qdata)
-qdata2<-qdata[which(qdata$usage==1),]
-qdata2$usage<-NULL
-quesc_db<-as.character(qdata2[1,1])
-T1<-as.numeric(as.character(qdata2[1,2]))
-T2<-as.numeric(as.character(qdata2[1,3]))
-n_dta<-nchar(as.character(factor(qdata2[1,1])))
-pu_name<-substr(as.character(factor(qdata2[1,1])), 16:(n_dta-10), (n_dta-10))
+list_of_data_lut<-dbReadTable(DB, c("public", "list_of_data_lut"))
+# return the selected data from the list
+data_lut<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==ques_c_db),]
+data_npv<-list_of_data_lut[which(list_of_data_lut$TBL_NAME==NPV),]
+
+quesc_db<-as.character(data_lut[1,2])
+n_dta<-nchar(as.character(factor(data_lut[1,2])))
+T1<-as.integer(substr(data_lut[1,2], (n_dta-7):(n_dta-4), (n_dta-4)))
+T2<-as.integer(substr(data_lut[1,2], (n_dta-3):n_dta, n_dta))
+pu_name<-substr(as.character(factor(data_lut[1,2])), 16:(n_dta-8), (n_dta-8))
 
 #====CREATE FOLDER AND WORKING DIRECTORY====
-TA1.index=TA1.index+1
-hist_folder<-paste("OpCost_", pu_name,"_", T1,"_",T2,"_",TA1.index,sep="")
-wd<-paste(dirname(proj.file),"/TA/", sep="")
-setwd(wd)
-dir.create(hist_folder)
-
-wd<-paste(wd, hist_folder, sep='')
+idx_TA_opcost=idx_TA_opcost+1
+wd<-paste(dirname(proj.file), "/TA/", idx_TA_opcost, "_OpCostCurve_", T1, "_", T2, "_", pu_name, sep="")
+dir.create(wd)
 setwd(wd)
 
 # load datasets
-data<-eval(parse(text=(paste(quesc_db))))
-lookup_npv <- read.table(NPV, header=TRUE, sep=",")
+data<-dbReadTable(DB, c("public", data_lut$TBL_DATA))
+lookup_npv<-dbReadTable(DB, c("public", data_npv$TBL_DATA))
 t1=T1
 t2=T2
 period<-t2-t1
@@ -101,7 +60,7 @@ period<-t2-t1
 
 #prepare NPV look up table
 lookup_n<-lookup_npv
-lookup_n$CLASS<-NULL
+lookup_n[,2]<-NULL
 colnames(lookup_n)[1] ="ID_LC1"
 colnames(lookup_n)[2] ="NPV1"
 data<-merge(data,lookup_n,by="ID_LC1")
@@ -185,39 +144,90 @@ x_val<-find_x_val$order[1]
 #y<-y+theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0))
 
 
+#WRITE REPORT
+title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
+sub_title<-"\\b\\fs28 Sub modul 1: Opportunity Cost Curve \\b0\\fs20"
+line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
+chapter1<-"\\b\\fs24 1.Opportunity curve \\b0\\fs20"
+rtffile <- RTF("TA-Opportunity_cost_curve_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+img_location <- paste0(LUMENS_path, "/ta_cover.png")
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul TA\n\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+
+addParagraph(rtffile, title)
+addParagraph(rtffile, sub_title)
+addNewLine(rtffile)
+addParagraph(rtffile, line)
+addNewLine(rtffile)
+addParagraph(rtffile, chapter1)
+addNewLine(rtffile)
+
+addPlot(rtffile, plot.fun=print, width=6, height=5, res=300, 
+        barplot(opcost_all$opcost_log, axes=F, xlab='Emission Per-Ha Area (ton CO2-eq/ha.year)', ylab='Opportunity Cost ($/ton CO2-eq)', col=rainbow(20), space=0.01)+
+        box()+
+        axis(1)+
+        axis(2,at=log10(c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000)),
+             label=c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000))+
+        abline(h=log10(1), col='black')+
+        abline(h=log10(cost_threshold), lty=3)+abline(v=x_val+4)
+)
+addParagraph(rtffile, "\\b\\fs20 Figure 1. Opportunity cost curve t1\\b0\\fs20.")
+addNewLine(rtffile)
+
+done(rtffile)
+
+resave(idx_TA_opcost, file=proj.file)
+
+dbDisconnect(DB)
+
+#=Writing final status message (code, message)
+statuscode<-1
+statusmessage<-"SCIENDO period projection successfully completed!"
+statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+
 #-----------------------------------------------------------------------
 
-reports<-paste("
-               Land Use Planning for Multiple Environmental Services
-               ========================================================
-               ***
-               
-               # Lembar hasil analisis TA-Opportunity Cost:
-               # Perhitungan opportunity cost berdasarkan data profitabilitas
-               
-               ***
-               
-               # Opportunity cost oleh masing-masing unit perencanaan
-               ```{r fig.width=12, fig.height=10, echo=FALSE}
-               barplot(opcost_all$opcost_log, axes=F, xlab='Emission Per-Ha Area (ton CO2-eq/ha.year)', ylab='Opportunity Cost ($/ton CO2-eq)', col=rainbow(20), space=0.01)
-               box()
-               axis(1)
-               axis(2,at=log10(c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000)),
-               label=c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000))
-               abline(h=log10(1), col='black')
-               abline(h=log10(cost_threshold), lty=3)
-               abline(v=x_val+4)
-               ```
-               ***
-               # Intisari opportunity cost
-               ```{r fig.width=10, fig.height=9, echo=FALSE}
-               pandoc.table(TA_opcost_database)
-               
-               ```
-               ***
-               ")
+# reports<-paste("
+# Land Use Planning for Multiple Environmental Services
+# ========================================================
+# ***
+# 
+# # Lembar hasil analisis TA-Opportunity Cost:
+# # Perhitungan opportunity cost berdasarkan data profitabilitas
+# 
+# ***
+# 
+# # Opportunity cost oleh masing-masing unit perencanaan
+# ```{r fig.width=12, fig.height=10, echo=FALSE}
+# barplot(opcost_all$opcost_log, axes=F, xlab='Emission Per-Ha Area (ton CO2-eq/ha.year)', ylab='Opportunity Cost ($/ton CO2-eq)', col=rainbow(20), space=0.01)
+# box()
+# axis(1)
+# axis(2,at=log10(c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000)),
+# label=c(-10000, -1000, -100, -10, -1, -0.1, -0.01, -0.001, -0.0001, 0.0001, 0.001, 0.01, 0.1, 1, cost_threshold, 10, 100, 1000, 10000))
+# abline(h=log10(1), col='black')
+# abline(h=log10(cost_threshold), lty=3)
+# abline(v=x_val+4)
+# ```
+# ***
+# # Intisari opportunity cost
+# ```{r fig.width=10, fig.height=9, echo=FALSE}
+# pandoc.table(TA_opcost_database)
+# 
+# ```
+# ***
+# ")
 
 
 #WRITE REPORT
-write(reports,file="reporthtml.Rmd")
-knit2html("reporthtml.Rmd", options=c("use_xhml"))
+# write(reports,file="reporthtml.Rmd")
+# knit2html("reporthtml.Rmd", options=c("use_xhml"))
