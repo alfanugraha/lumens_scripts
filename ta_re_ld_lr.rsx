@@ -202,7 +202,7 @@ save(int_con,
      multiplier,
      land.distribution.prop,
      land.requirement_table,
-     landuse,
+     # landuse,
      landuse_lut,
      file=paste0('LandRequirement', I_O_period, '.ldbase'))
 
