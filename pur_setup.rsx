@@ -326,7 +326,23 @@ time_start<-paste("Processing started : ", time_start, sep="")
 time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-rtffile <- RTF("PUR-Build_report.doc", font.size=9)
+rtffile <- RTF("PUR-Build_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+# INPUT
+file.copy(paste0(LUMENS_path, "/pur_cover.png"), wd_user, recursive = FALSE)
+img_location<-paste0(wd_user, "/pur_cover.png")
+# loading the .png image to be edited
+cover <- image_read(img_location)
+# to display, only requires to execute the variable name, e.g.: "> cover"
+# adding text at the desired location
+text_submodule <- paste("Sub-Modul PUR\n\nRekonsiliasi Unit Perencanaan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
+cover_image <- image_write(cover_image)
+# 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
+# 'location' defines the relative location of the text to the anchor defined in 'gravity'
+# configure font type
+addPng(rtffile, cover_image, width = 8.267, height = 11.692)
+addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
+
 addParagraph(rtffile, title)
 addParagraph(rtffile, sub_title)
 addNewLine(rtffile)

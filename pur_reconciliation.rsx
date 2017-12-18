@@ -169,13 +169,14 @@ line<-paste("-------------------------------------------------------------------
 # ==== Report 0. Cover=====
 rtffile <- RTF("PUR-Reconcile_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
-img_location <- "C:/LUMENS_modified_scripts/Report/Slide1.PNG"
+file.copy(paste0(LUMENS_path, "/pur_cover.png"), working_directory, recursive = FALSE)
+img_location<-paste0(working_directory, "/pur_cover.png")
 # loading the .png image to be edited
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
 text_submodule <- paste("    Rekonsiliasi Unit Perencanaan\n", "    ", location, sep="")
-cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+300", font = "Helvetica")
+cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+300", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
 # 'location' defines the relative location of the text to the anchor defined in 'gravity'
