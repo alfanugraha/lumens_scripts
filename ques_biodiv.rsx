@@ -553,24 +553,29 @@ subsequent.changes<-function(habitat.analysis,lu_db, analysis, location, T1, T2)
   luchg.analysis.att<-unique(luchg.analysis.att[,1:4])
   names(luchg.analysis.att)[4] <- "COUNT"
   luchg.analysis.att<-luchg.analysis.att[ order(luchg.analysis.att$COUNT, decreasing = TRUE), ]
-  luchg.analysis.att<-transform(luchg.analysis.att, LUCHG=paste0(LC_t1," to " ,LC_t2))
-  luchg.analysis.att$LUCHG<-as.character(luchg.analysis.att$LUCHG)
-  
-  for (i in 1:nrow(luchg.analysis.att)){
-    if(as.character(luchg.analysis.att[i,"LC_t1"])==as.character(luchg.analysis.att[i,"LC_t2"])){
-      luchg.analysis.att[i,"LUCHG"]<-paste("Persistent",luchg.analysis.att[i,"LC_t1"])
-    }}
-  luchg.analysis.att<-luchg.analysis.att[,c("Z_NAME", "COUNT", "LUCHG")]
-  luchg.analysis.att$AREA_HA <- luchg.analysis.att$COUNT * Spat_res
-  luchg.analysis.att <- luchg.analysis.att[,c("Z_NAME", "LUCHG", "AREA_HA")]
-  names(luchg.analysis.att) <- c("Unit Perencanaan", "Perubahan Tutupan", "Luas") # INDO ver
-  luchg.analysis.att_file <- luchg.analysis.att
-  luchg.analysis.att_file$Analysis <- analysis
-  setwd(quesb_folder)
-  tryCatch({
-    luchg.db.filename<-paste("LUCHG_",analysis,"_database",location,'_', T1,'_',T2,'.dbf', sep='')
-    write.dbf(luchg.analysis.att_file, luchg.db.filename)
-  },error=function(e){cat("Skipping database export process :",conditionMessage(e), "\n")})
+  if(nrow(luchg.analysis.att) > 0){
+    luchg.analysis.att<-transform(luchg.analysis.att, LUCHG=paste0(LC_t1," to " ,LC_t2))
+    luchg.analysis.att$LUCHG<-as.character(luchg.analysis.att$LUCHG)
+    
+    for (i in 1:nrow(luchg.analysis.att)){
+      if(as.character(luchg.analysis.att[i,"LC_t1"])==as.character(luchg.analysis.att[i,"LC_t2"])){
+        luchg.analysis.att[i,"LUCHG"]<-paste("Persistent",luchg.analysis.att[i,"LC_t1"])
+      }}
+    luchg.analysis.att<-luchg.analysis.att[,c("Z_NAME", "COUNT", "LUCHG")]
+    luchg.analysis.att$AREA_HA <- luchg.analysis.att$COUNT * Spat_res
+    luchg.analysis.att <- luchg.analysis.att[,c("Z_NAME", "LUCHG", "AREA_HA")]
+    names(luchg.analysis.att) <- c("Unit Perencanaan", "Perubahan Tutupan", "Luas") # INDO ver
+    luchg.analysis.att_file <- luchg.analysis.att
+    luchg.analysis.att_file$Analysis <- analysis
+    setwd(quesb_folder)
+    tryCatch({
+      luchg.db.filename<-paste("LUCHG_",analysis,"_database",location,'_', T1,'_',T2,'.dbf', sep='')
+      write.dbf(luchg.analysis.att_file, luchg.db.filename)
+    },error=function(e){cat("Skipping database export process :",conditionMessage(e), "\n")})
+  } else{
+    luchg.analysis.att <- luchg.analysis.att[, 1:3]
+    names(luchg.analysis.att) <- c("Unit Perencanaan", "Perubahan Tutupan", "Luas")
+  }
   return(luchg.analysis.att)
 }
 #zonal stat for habitat loss
@@ -1705,7 +1710,8 @@ for(p in 1:length(fa_class)){
     
     tryCatch({
       plot.HR
-      luchg.db.recovery
+      luchg.db.recovery # may contain zero row, therefore, extra line below is added
+      if(nrow(luchg.db.recovery) == 0)luchg.db.recovery$induce_error<- 0
       subch_num <- subch_num + 1
       if(subch_num ==3) addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
       text <- paste("\\b\\fs24 ", subch_num, ". Penurunan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
