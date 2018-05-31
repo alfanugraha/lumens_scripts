@@ -8,6 +8,7 @@
 ##focal_coverage=string 
 ##edgecon=string
 ##window.shape=selection Bujur sangkar; Lingkaran
+##adjacent_only=selection TRUE; FALSE
 ##windowsize=number 1000
 ##gridres=number 10000
 ##resultoutput = output table
@@ -395,12 +396,30 @@ teci.analysis<-function(landuse, lu_path){
   ll <- dbSendQuery(con, del)
   
   input_desc<-paste("UPDATE frg_table_strings SET value='",classdesc,"' WHERE rec_id=5;",sep="")
+if(adjacent_only==TRUE){ # to facilitate contrast table adjustment according to the 'adjacent_only' variable value ADedit310518 
   input_edge<-paste("UPDATE frg_table_strings SET value='",cont_csv,"' WHERE rec_id=2;",sep="")
+  } else{
+    edgecon_mod <- read.table(cont_csv, sep = ",", stringsAsFactors = FALSE)
+    edgecon_mod[4:nrow(edgecon_mod),] <- edgecon_mod[(3+which(contab[,1]==names(fa_class[p]))),]
+    colnames(edgecon_mod) <- NA
+    cont_csv_mod <- paste0(LUMENS_path_user,"/", edgecon,"_mod.csv")
+    cont_csv_mod <- gsub("\\\\", "/", cont_csv_mod)
+    
+    write.table(edgecon_mod, cont_csv_mod, sep =",", row.names = FALSE, col.names = FALSE, na = "", quote = FALSE)
+    #modify the value according to the focal area selection
+    input_edge<-paste("UPDATE frg_table_strings SET value='",cont_csv_mod,"' WHERE rec_id=2;",sep="")
+  }
   input_out<-paste("UPDATE frg_table_strings SET value='",quesb_dir,"' WHERE rec_id=6;",sep="")
   input_window_size_sqr<-paste("UPDATE frg_table_numerics SET value=",windowsize,"WHERE rec_id=18;"); #change square window radius
   input_window_size_circ<-paste("UPDATE frg_table_numerics SET value=",windowsize,"WHERE rec_id=19;"); #change circle window radius
   input_window_type<-paste("UPDATE frg_table_numerics SET value=",window.shape,"WHERE rec_id=13;")
   ll <- dbSendQuery(con, input_desc)
+  if(adjacent_only==FALSE){# first two row to turn off the class metric calculation, while another two is turning on the landscape metric calculation ADedit310518
+    output_metric <- paste0("UPDATE frg_table_metrics SET value='0' WHERE rec_id=173;",sep="")
+    ll <- dbSendQuery(con, output_metric)
+    output_metric <- paste0("UPDATE frg_table_metrics SET value='1' WHERE rec_id=280;",sep="")
+    ll <- dbSendQuery(con, output_metric)
+  }
   ll <- dbSendQuery(con, input_edge)
   ll <- dbSendQuery(con, input_out)
   ll <- dbSendQuery(con, input_window_size_sqr)
@@ -795,25 +814,11 @@ for(p in 1:length(fa_class)){
     dbDisconnect(DB)
     #Execute TECI T1
     mwfile.init<-teci.analysis(landuse_t1, eval(parse(text=paste0("lu",k,"_path"))))
-    # [1] "1 no previous raster file found, algorithm continue..."
-    # [1] "2 no previous raster file found, algorithm continue..."
-    # [1] "3 no previous raster file found, algorithm continue..."
-    # [1] "Fragstats' model found!"
-    # Fragstats v4.2.1.603 [built on 2015-01-23]
-    # Copyright 2015 Kevin Mcgarigal & Eduard Ene
-    # Loading model:D:/IDH//teciuf.fca
-    # Checking model consistency
-    # Model consistency check: OK
-    # Starting run 1.
-    # Analyzing file: C:/IDH/new/Raster/lc1990_sumsel_v2.tif
-    # Invalid class descriptors header
-    # Table files require signature.
-    # The metric selection require the Edge Constrast table but the table is not loaded.
-    # Analysis failed for file: C:/IDH/new/Raster/lc1990_sumsel_v2.tif
-    # Run 1 ended.
-    # Run completed in 0h : 0m : 0.796000s, please review the results.
+    if(adjacent_only == FALSE) mwfile.init <- mwfile.init*foc.area.init #Clipping the result by the focal area extent ADedit 310518
+    
     #Execute TECI T2
     mwfile.final<-teci.analysis(landuse_t2, eval(parse(text=paste0("lu",k+1,"_path"))))
+    if(adjacent_only == FALSE) mwfile.final <- mwfile.final*foc.area.final #Clipping the result by the focal area extent ADedit 310518
     # reconnect with the postgresql database
     DB <- dbConnect(
       driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
