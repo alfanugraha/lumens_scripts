@@ -8,7 +8,7 @@
 ##focal_coverage=string 
 ##edgecon=string
 ##window.shape=selection Bujur sangkar; Lingkaran
-##adjacent_only=selection TRUE; FALSE
+##adjacent_only=selection FALSE; TRUE
 ##windowsize=number 1000
 ##gridres=number 10000
 ##resultoutput = output table
