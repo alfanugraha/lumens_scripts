@@ -23,7 +23,7 @@ library(spatial.tools)
 library(DBI)
 library(RPostgreSQL)
 library(rpostgis)
-# library(stringr)
+library(magick)
 
 #=Load active project
 load(proj.file)
@@ -334,7 +334,7 @@ img_location<-paste0(wd_user, "/pur_cover.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul PUR\n\nRekonsiliasi Unit Perencanaan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+text_submodule <- paste("Sub-Modul PUR\n\nRekonsiliasi Unit Perencanaan\n", location, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image

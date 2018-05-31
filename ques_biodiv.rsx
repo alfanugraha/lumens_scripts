@@ -8,7 +8,7 @@
 ##focal_coverage=string 
 ##edgecon=string
 ##window.shape=selection Bujur sangkar; Lingkaran
-##adjacent_only=selection TRUE; FALSE
+##adjacent_only=selection FALSE; TRUE
 ##windowsize=number 1000
 ##gridres=number 10000
 ##resultoutput = output table
@@ -419,6 +419,12 @@ if(adjacent_only==1){ # to facilitate contrast table adjustment according to the
     ll <- dbSendQuery(con, output_metric)
     output_metric <- paste0("UPDATE frg_table_metrics SET value='1' WHERE rec_id=280;",sep="")
     ll <- dbSendQuery(con, output_metric)
+  }
+  if(adjacent_only==0){# first two row to turn off the class metric calculation, while another two is turning on the landscape metric calculation ADedit310518
+    calculation_scale <- paste0("UPDATE frg_table_options SET value='0' WHERE rec_id=27;",sep="")
+    ll <- dbSendQuery(con, calculation_scale)
+    calculation_scale <- paste0("UPDATE frg_table_options SET value='1' WHERE rec_id=29;",sep="")
+    ll <- dbSendQuery(con, calculation_scale)
   }
   ll <- dbSendQuery(con, input_edge)
   ll <- dbSendQuery(con, input_out)
