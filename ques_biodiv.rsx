@@ -99,6 +99,7 @@ if (data_pu$RST_DATA=="ref") {
   colnames(count_ref)<-c("IDADM", "COUNT")
   ref_table<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
   lookup_z<-merge(count_ref, ref_table, by="IDADM")
+  colnames(lookup_z) <- c("ID", "COUNT","Legend")
 } else {
   zone<-getRasterFromPG(pgconf, project, data_pu$RST_DATA, paste(data_pu$RST_DATA, '.tif', sep=''))
   lookup_z<-dbReadTable(DB, c("public", data_pu$LUT_NAME)) 
@@ -608,7 +609,7 @@ zonal_stat<-function(habitat.change, zone, lookup_z){
   habitat.change.0<-reclassify(habitat.change>0, cbind(NA, 0))
   zstat.habitat.change<-ZonalStat(habitat.change.0, zone, FUN = "sum")
   colnames(zstat.habitat.change)[1] ="ZONE"
-  zstat.habitat.change<-merge(lookup_z[,c("ID", "Legend")], zstat.habitat.change, by.x = "ID", by.y="ZONE")
+  zstat.habitat.change<-merge(lookup_z[,c(1,3)], zstat.habitat.change, by.x = colnames(lookup_z)[1], by.y="ZONE")
   zstat.habitat.change$Proportion<-((zstat.habitat.change$sum)/(sum(zstat.habitat.change$sum)))*100
   zstat.habitat.change.prop<-as.data.frame(cbind(' ','TOTAL',(sum(zstat.habitat.change$sum)), (sum(zstat.habitat.change$Proportion))))
   zstat.habitat.change$Proportion<-round(zstat.habitat.change$Proportion,digits=2)
@@ -1034,7 +1035,7 @@ for(p in 1:length(fa_class)){
       habitat.recovery.0<-reclassify(habitat.recovery, cbind(NA, 0))
       zstat.habitat.recovery<-ZonalStat(habitat.recovery.0, zone, FUN = "all")
       colnames(zstat.habitat.recovery)[1] ="ZONE"
-      zstat.habitat.recovery<-merge(lookup_z[,c(1,3)], zstat.habitat.recovery, by.x = "ID", by.y = "ZONE")
+      zstat.habitat.recovery<-merge(lookup_z[,c(1,3)], zstat.habitat.recovery, by.x = colnames(lookup_z)[1], by.y = "ZONE")
       names(zstat.habitat.recovery)[1] = "ZONE"
       zstat.habitat.recovery[4]<-NULL
       zstat.habitat.recovery[4]<-NULL
@@ -1054,7 +1055,7 @@ for(p in 1:length(fa_class)){
       habitat.degradation.0<-reclassify(habitat.degradation, cbind(NA, 0))
       zstat.habitat.degradation<-ZonalStat(habitat.degradation.0, zone, FUN = "all")
       colnames(zstat.habitat.degradation)[1] ="ZONE"
-      zstat.habitat.degradation<-merge(lookup_z[,c(1,3)], zstat.habitat.degradation, by.x = "ID", by.y = "ZONE")
+      zstat.habitat.degradation<-merge(lookup_z[,c(1,3)], zstat.habitat.degradation, by.x = colnames(lookup_z)[1], by.y = "ZONE")
       names(zstat.habitat.degradation)[1] = "ZONE"
       zstat.habitat.degradation[4]<-NULL
       zstat.habitat.degradation[4]<-NULL
