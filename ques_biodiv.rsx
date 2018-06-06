@@ -820,12 +820,16 @@ for(p in 1:length(fa_class)){
     dbDisconnect(DB)
     #Execute TECI T1
     mwfile.init<-teci.analysis(landuse_t1, eval(parse(text=paste0("lu",k,"_path"))))
-    if(adjacent_only==0) mwfile.init <- mwfile.init*foc.area.init #Clipping the result by the focal area extent ADedit 310518
-    
+    if(adjacent_only==0){
+      foc.area.initNA <- reclassify(foc.area.init, cbind(0, NA))
+      mwfile.init <- mwfile.init*foc.area.initNA #Clipping the result by the focal area extent ADedit 310518
+    }
     #Execute TECI T2
     mwfile.final<-teci.analysis(landuse_t2, eval(parse(text=paste0("lu",k+1,"_path"))))
-    if(adjacent_only==0) mwfile.final <- mwfile.final*foc.area.final #Clipping the result by the focal area extent ADedit 310518
-    # reconnect with the postgresql database
+    if(adjacent_only==0){
+      foc.area.finalNA <- reclassify(foc.area.final, cbind(0, NA))
+      mwfile.final <- mwfile.final*foc.area.finalNA #Clipping the result by the focal area extent ADedit 310518
+    }# reconnect with the postgresql database
     DB <- dbConnect(
       driver, dbname=project, host=as.character(pgconf$host), port=as.character(pgconf$port),
       user=as.character(pgconf$user), password=as.character(pgconf$pass)
