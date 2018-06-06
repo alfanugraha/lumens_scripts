@@ -827,7 +827,7 @@ for(p in 1:length(fa_class)){
     #Execute TECI T2
     mwfile.final<-teci.analysis(landuse_t2, eval(parse(text=paste0("lu",k+1,"_path"))))
     if(adjacent_only==0){
-      foc.area.finalNA <- reclassify(foc.area.finalNA, cbind(0, NA))
+      foc.area.finalNA <- reclassify(foc.area.final, cbind(0, NA))
       mwfile.final <- mwfile.final*foc.area.finalNA #Clipping the result by the focal area extent ADedit 310518
     }# reconnect with the postgresql database
     DB <- dbConnect(
