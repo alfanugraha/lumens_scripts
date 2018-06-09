@@ -333,7 +333,17 @@ foc.area.grid.sampled<-function(foc.area, sampling.grid){
   tothab$sum<-((tothab$sum/totarea)*100)
   return(tothab)
 }
-
+# function to correctly replace the edge contrast weight value ADadd090618
+update_contrast <- function(template_row_n = numeric(), table_input = data.frame()){
+  template_row <- table_input[template_row_n,] 
+  for(r_id in 1:nrow(table_input)){
+    for(c_id in 1:ncol(table_input)){
+      table_input[r_id, c_id] <- (as.numeric(as.character(template_row[r_id])) + as.numeric(as.character(template_row[c_id])))/2
+    }
+  }
+  table_input[template_row_n,] <- template_row
+  return(table_input)
+}
 teci.analysis<-function(landuse, lu_path){
   modid=1
   internal<-paste('')
@@ -397,11 +407,13 @@ teci.analysis<-function(landuse, lu_path){
   ll <- dbSendQuery(con, del)
   
   input_desc<-paste("UPDATE frg_table_strings SET value='",classdesc,"' WHERE rec_id=5;",sep="")
-if(adjacent_only==1){ # to facilitate contrast table adjustment according to the 'adjacent_only' variable value ADedit310518 
-  input_edge<-paste("UPDATE frg_table_strings SET value='",cont_csv,"' WHERE rec_id=2;",sep="")
+  if(adjacent_only==1){ # to facilitate contrast table adjustment according to the 'adjacent_only' variable value ADedit310518 
+    input_edge<-paste("UPDATE frg_table_strings SET value='",cont_csv,"' WHERE rec_id=2;",sep="")
   } else{
     edgecon_mod <- read.table(cont_csv, sep = ",", stringsAsFactors = FALSE)
-    edgecon_mod[4:nrow(edgecon_mod),] <- edgecon_mod[(3+which(contab[,1]==names(fa_class[p]))),]
+    # edgecon_mod[4:nrow(edgecon_mod),] <- edgecon_mod[(3+which(contab[,1]==names(fa_class[p]))),] wrongly define the contrast weight value ADremove090618
+    # apply function 'update_contrast'
+    edgecon_mod[4:nrow(edgecon_mod),] <- update_contrast(which(contab[,1] == names(fa_class[p])), edgecon_mod[4:nrow(edgecon_mod),])
     colnames(edgecon_mod) <- NA
     cont_csv_mod <- paste0(LUMENS_path_user,"/", edgecon,"_mod.csv")
     cont_csv_mod <- gsub("\\\\", "/", cont_csv_mod)
