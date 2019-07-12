@@ -330,3 +330,141 @@ system(command)
 statuscode<-1
 statusmessage<-"SCIENDO has completed successfully"
 statusoutput<-data.frame(statuscode=statuscode, statusmessage=statusmessage)
+
+
+
+
+library(raster)
+library(rgdal)
+library(rasterVis)
+library(RColorBrewer)
+library(ggplot2)
+library(rtf)
+# 
+# command2<-paste(Directory_of_factors, "/Result/", sep="")
+# command3.1<-paste(command2,"Hasil_simulasi_01.tif", sep="")
+landuse1<-raster("lc_bauH_2020.tif")
+landuse2<-raster("lc_bauH_2025.tif")
+landuse3<-raster("lc_bauH_2030.tif")
+
+setwd("D:/GGP/LamDong/Simulation/process/lumens_dir/SCIENDO/bauH_LUCM/result/")
+# lookup_lc <- read.table(Look_up_table_land_use, header=TRUE, sep=",",)
+lookup_lc <- read.table("D:/GGP/LamDong/Data/Table/LamDong_classes.csv", header=TRUE, sep=";")
+colnames(lookup_lc)<-c("ID", "CLASS", "TRAJ")
+area_lc1<-na.omit(as.data.frame(freq(landuse1)))
+area_lc2<-na.omit(as.data.frame(freq(landuse2)))
+area_lc3<-na.omit(as.data.frame(freq(landuse3)))
+colnames(area_lc1)[1] = "ID"
+colnames(area_lc1)[2] = "COUNT_SIM1"
+colnames(area_lc2)[2] = "COUNT_SIM2"
+colnames(area_lc3)[2] = "COUNT_SIM3"
+
+test1<-stack(landuse1,landuse2,landuse3)
+png(file = "myplot.png", bg = "transparent", width = 1024, height = 768, res=200)
+gambar1<-plot(test1)
+dev.off()
+
+area_lc<-cbind(area_lc1, area_lc2[2],area_lc3[2])
+area_lc<-merge(lookup_lc, area_lc,by="ID")
+
+#Create Map for report
+myColors1 <- brewer.pal(9,"Set1")
+myColors2 <- brewer.pal(8,"Accent")
+myColors3 <- brewer.pal(12,"Paired")
+myColors4 <- brewer.pal(9, "Pastel1")
+myColors5 <- brewer.pal(8, "Set2")
+myColors6 <- brewer.pal(8, "Dark2")
+myColors7 <- rev(brewer.pal(11, "RdYlGn"))
+myColors8 <- "#000000"
+myColors9 <- brewer.pal(12, "Set3")
+
+if (0 %in% area_lc1$ID){
+  myColors  <-c(myColors8, myColors7,myColors1, myColors2, myColors3, myColors4, myColors5, myColors6)
+} else {
+  myColors  <-c(myColors7,myColors1, myColors2, myColors3, myColors4, myColors5, myColors6)
+}
+
+
+#Landuse 1 map
+myColors.lu <- myColors[1:length(unique(area_lc1$ID))]
+ColScale.lu<-scale_fill_manual(name="Tipe tutupan lahan", breaks=area_lc1$ID, labels=area_lc$CLASS, values=myColors.lu)
+plot.LU1<-gplot(landuse1, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
+  coord_equal() + ColScale.lu +
+  theme(plot.title = element_text(lineheight= 5, face="bold")) +
+  theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+         panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+         legend.title = element_text(size=8),
+         legend.text = element_text(size = 6),
+         legend.key.height = unit(0.25, "cm"),
+         legend.key.width = unit(0.25, "cm"))
+plot.LU2<-gplot(landuse2, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
+  coord_equal() + ColScale.lu +
+  theme(plot.title = element_text(lineheight= 5, face="bold")) +
+  theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+         panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+         legend.title = element_text(size=8),
+         legend.text = element_text(size = 6),
+         legend.key.height = unit(0.25, "cm"),
+         legend.key.width = unit(0.25, "cm"))
+plot.LU3<-gplot(landuse3, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
+  coord_equal() + ColScale.lu +
+  theme(plot.title = element_text(lineheight= 5, face="bold")) +
+  theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
+         panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+         legend.title = element_text(size=8),
+         legend.text = element_text(size = 6),
+         legend.key.height = unit(0.25, "cm"),
+         legend.key.width = unit(0.25, "cm"))
+
+
+#WRITE REPORT
+title<-"\\b\\fs40 LUMENS-SCIENDO Project Report\\b0\\fs20"
+sub_title<-"\\b\\fs32 LAND USE CHANGE SIMULATION\\b0\\fs20"
+line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
+chapter1<-"\\b\\fs28 SUMMARY OF SIMULATION RESULT \\b0\\fs20"
+chapter2<-"\\b\\fs28 LAND USE CHANGE SIMULATION MAP \\b0\\fs20"
+rtffile <- RTF("SCIENDO-Simulation_report.lpr", font.size=9)
+area_name_rep <- "Lam Dong"
+addParagraph(rtffile, title)
+addParagraph(rtffile, sub_title)
+addNewLine(rtffile)
+addParagraph(rtffile, line)
+#addParagraph(rtffile, date)
+addParagraph(rtffile, line)
+addNewLine(rtffile)
+# addParagraph(rtffile, "Simulasi perubahan tutupan lahan dilakukan untuk memperkirakan perubahan tutupan lahan di suatu daerah di masa yang akan datang. Analisa ini dilakukan dengan menggunakan data peta tutupan lahan pada dua periode waktu yang berbeda dan data-data faktor pemicu perubahan penggunaan lahan di suatu daerah. Informasi yang dihasilkan melalui analisa ini dapat digunakan dalam proses perencanaan untuk berbagai hal. Diantaranya adalah: memperkirakan prioritas pembangunan, memperkirakan dampak ex-ante perubahan penggunaan lahan, merencanakan skenario pembangunan di masa yang akan datang, dan lain sebagainya.")
+addParagraph(rtffile, "Land use/cover change simulation is conducted to estimate changes in land use/cover in a certain region in the future. The analysis is carried out by using two different time series of land use/cover maps and the collection of proxy maps as driving factors in the region. Information generated through this analysis can be used in the planning process for various things, such as assessing development priorities, estimating ex-ante impacts, planning future development scenario, and so forth.")
+addNewLine(rtffile)
+addParagraph(rtffile, chapter1)
+addParagraph(rtffile, line)
+addNewLine(rtffile)
+# addParagraph(rtffile, "Data yang dihasilkan dalam analisa ini adalah data peta prediksi penggunaan lahan di masa yang akan datang berdasarkan faktor pemicu yang telah diperkirakan pada analisa perubahan penggunaan lahan menggunakan modul Pre-QUES")
+addParagraph(rtffile, "This section presents the result of projected land use/cover based on estimated driving factors data from land use change analysis using Pre-QUES")
+addNewLine(rtffile)
+addPng(rtffile,"myplot.png", width=5, height=5)
+addNewLine(rtffile)
+addTable(rtffile,area_lc,font.size=8)
+addNewLine(rtffile)
+addParagraph(rtffile, chapter2)
+addParagraph(rtffile, line)
+addNewLine(rtffile)
+addParagraph(rtffile, "Pada bagian ini disajikan peta-peta hasil prediksi perubahan penggunaan lahan untuk keseluruhan bentang lahan yang dianalisa")
+addNewLine(rtffile)
+I_O_period_1_rep <- "2020"
+text <- paste("\\b \\fs20 Land cover ", area_name_rep, " \\fs20 in ", I_O_period_1_rep," \\b0 \\fs20 ", sep="")
+addParagraph(rtffile, text)
+addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150,plot.LU1)
+addNewLine(rtffile)
+I_O_period_1_rep <- "2025"
+text <- paste("\\b \\fs20 Land cover ", area_name_rep, " \\fs20 in ", I_O_period_1_rep," \\b0 \\fs20 ", sep="")
+addParagraph(rtffile, text)
+addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150,plot.LU2)
+addNewLine(rtffile)
+I_O_period_1_rep <- "2030"
+text <- paste("\\b \\fs20 Land cover ", area_name_rep, " \\fs20 in ", I_O_period_1_rep," \\b0 \\fs20 ", sep="")
+addParagraph(rtffile, text)
+addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150,plot.LU3)
+addNewLine(rtffile)
+done(rtffile)
+
+
