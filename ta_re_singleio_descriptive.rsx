@@ -218,20 +218,20 @@ PENGGANDA<-"Sectoral_multiplier"
 # write.dbf(multiplier, PENGGANDA,factor2char = TRUE, max_nchar = 254)
 
 #WRITE REPORT
-title<-"\\b\\fs32 LUMENS-Trade-off Analysis (TA) Project Report\\b0\\fs20"
-sub_title<-"\\b\\fs28 Sub-modules 2: Regional economic-Descriptive analysis (Single I-O)\\b0\\fs20"
+title<-"\\b\\fs32 Báo cáo phân tích đánh đổi (TA) dự án LUMENS\\b0\\fs20"
+sub_title<-"\\b\\fs28 Tiểu Mô-đun 2: Phân tích mô tả kinh tế khu vực (Single I-O)\\b0\\fs20"
 test<-as.character(Sys.Date())
-date<-paste("Date : ", test, sep="")
-time_start<-paste("Processing started : ", time_start, sep="")
-time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+date<-paste("Ngày : ", test, sep="")
+time_start<-paste("Bắt đầu : ", time_start, sep="")
+time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-chapter1<-"\\b\\fs24 1.Analysis of Sectoral Linkages \\b0\\fs20"
-chapter2<-"\\b\\fs24 2.Analysis of GDP \\b0\\fs20"
-chapter2_1<-"\\b\\i\\fs20 Total GDP \\b0\\i0\\fs20"
-chapter3<-"\\b\\fs24 2.Analysis of multiplier \\b0\\fs20"
+chapter1<-"\\b\\fs24 1.Phân tích các mối liên kết ngành  \\b0\\fs20"
+chapter2<-"\\b\\fs24 2.Phân tích GDP \\b0\\fs20"
+chapter2_1<-"\\b\\i\\fs20 Tổng GDP \\b0\\i0\\fs20"
+chapter3<-"\\b\\fs24 2. Phân tích số nhân \\b0\\fs20"
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("TA-Descriptive_analysis_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("TA-Descriptive_analysis_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
 file.copy(paste0(LUMENS_path, "/ta_cover.png"), working_dir, recursive = FALSE)
 img_location<-paste0(working_dir, "/ta_cover.png")
@@ -239,7 +239,7 @@ img_location<-paste0(working_dir, "/ta_cover.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul Ekonomi Regional\n\nAnalisis Deskriptif Sektor Ekonomi\n", location, ", ", "Tahun ", I_O_period, sep="")
+text_submodule <- paste("Sub-Modul Kinh tế khu vực \n\nPhân tích mô tả \n", location, ", ", "năm ", I_O_period, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -259,19 +259,19 @@ addParagraph(rtffile, line)
 addNewLine(rtffile)
 addParagraph(rtffile, chapter1)
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b\\fs20 Table 1. Sectoral linkages\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Bảng 1. Các mối liên kết ngành\\b0\\fs20.")
 addTable(rtffile,Linkages_table,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,BPD_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 1. Ten sectors with highest Backward power of dispersion\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 1. Mười lĩnh vực có năng lực phân tán lạc hậu cao nhất\\b0\\fs20.")
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,FPD_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 2. Ten sectors with highest Forward power of dispersion\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 2. Mười lĩnh vực có năng lực phân tán tiên tiến cao nhất\\b0\\fs20.")
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6,height=4,res=300,PRS_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 3. Sectoral typology based on linkages analysis\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 3. Hệ thống các loại hình ngành dựa trên phân tích liên kết\\b0\\fs20.")
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b\\fs20 Table 2. Primary sectors based on potential linkage\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Bảng 2. Các ngành chính dựa trên mối liên kết tiềm năng\\b0\\fs20.")
 addTable(rtffile,P.sector.selected,font.size=8)
 addNewLine(rtffile)
 addPageBreak(rtffile)
@@ -280,25 +280,25 @@ addNewLine(rtffile)
 addParagraph(rtffile, chapter2_1)
 addParagraph(rtffile, GDP_tot)
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b\\fs20 Table 3. Sectoral GDP\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Bảng 3. GDP ngành\\b0\\fs20.")
 addTable(rtffile,GDP,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,GDP_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 4. Twenty sectors with highest GDP\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 4. 20 ngành có GDP cao nhất\\b0\\fs20.")
 addPageBreak(rtffile)
 addParagraph(rtffile, chapter3)
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b\\fs20 Table 4. Sectoral multiplier\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Bảng 4. Số nhân ngành\\b0\\fs20.")
 addTable(rtffile,multiplier,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,OMPL_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 5. Twenty sectors with highest Output multiplier\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 5. 20 ngành có số nhân đầu ra cao nhất\\b0\\fs20.")
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,IMPL_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 6. Twenty sectors with highest Income multiplier\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 6. 20 ngành có số nhân thu nhập cao nhất\\b0\\fs20.")
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=5,height=3,res=300,LMPL_graph)
-addParagraph(rtffile, "\\b\\fs20 Figure 5. Twenty sectors with highest Labour multiplier\\b0\\fs20.")
+addParagraph(rtffile, "\\b\\fs20 Hình 7. ngành có số nhân lao động cao nhất\\b0\\fs20.")
 done(rtffile)
 
 #=Save all params into .ldbase objects

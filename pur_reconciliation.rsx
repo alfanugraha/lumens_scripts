@@ -152,22 +152,22 @@ names(myColors.RPB) <- unique(area_rec1$resolved)
 ColScale.RPB<-scale_fill_manual(values = myColors.RPB)
 Rec.phs.bar<-ggplot(data=area_rec1, aes(x=resolved, y=COUNT, fill=resolved)) + geom_bar(stat="identity") +coord_flip() + ColScale.RPB +
   geom_text(data=area_rec1, aes(x=resolved, y=COUNT, label=round(COUNT, 1)),size=3, vjust=0.1) +
-  ggtitle(paste("Hasil akhir rekonsiliasi" )) + guides(fill=FALSE) + ylab("Luas (ha)") +
+  ggtitle(paste("Kết quả thống nhất cuối cùng" )) + guides(fill=FALSE) + ylab("Luas (ha)") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
   theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 
 #write report
-title<-"\\b\\fs40 LUMENS-PUR Project Report\\b0\\fs20"
-sub_title<-"\\b\\fs32 REKONSILIASI UNIT PERENCANAAN MENGGUNAKAN DATA ACUAN\\b0\\fs20"
-date<-paste("Date : ", date(), sep="")
-time_start<-paste("Processing started : ", time_start, sep="")
-time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+title<-"\\b\\fs40 LUMENS-PUR Báo cáo dự án\\b0\\fs20"
+sub_title<-"\\b\\fs32 THỐNG NHẤT ĐƠN VỊ QUY HOẠCH SỬ DỤNG DỮ LIỆU THAM CHIẾU\\b0\\fs20"
+date<-paste("Ngày : ", date(), sep="")
+time_start<-paste("Bắt đầu : ", time_start, sep="")
+time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("PUR-Reconcile_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("PUR-Reconcile_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
 file.copy(paste0(LUMENS_path, "/pur_cover.png"), working_directory, recursive = FALSE)
 img_location<-paste0(working_directory, "/pur_cover.png")
@@ -175,7 +175,7 @@ img_location<-paste0(working_directory, "/pur_cover.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("    Rekonsiliasi Unit Perencanaan\n", "    ", location, sep="")
+text_submodule <- paste("    Thống nhất đơn vị quy hoạch\n", "    ", location, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+300", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -193,12 +193,12 @@ addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Rekonsiliasi unit perencanaan adalah proses untuk menyelesaikan tumpang-tindih ijin dengan merujuk pada peta acuan/referensi fungsi. Rekonsiliasi dilakukan dengan menganalisa kesesuaian fungsi antara data-data ijin dengan data referensi. Data ijin yang dimaksud datapat berupa data konsesi pengelolaan hutan, ijin perkebunan, ijin tambang dan lain sebagainya, Sedangkan data referensi yang digunakan dapat berupa data rencana tata ruang atau penunjukan kawasan. ")
+addParagraph(rtffile, "Thống nhất đơn vị quy hoạch là một quá trình giải quyết những sự cho phép chồng chéo dựa trên bản đồ tham chiếu. Việc thống nhất được thực hiện bằng cách phân tích tính tương thích của các chức năng giữa dữ liệu cho phép và dữ liệu tham chiếu. Dữ liệu cho phép được sử dụng có thể là nhượng bộ quản lý rừng, cấp phép trồng rừng, cấp phép khai thác, v.v.. Dữ liệu tham chiếu được sử dụng có thể là sơ đồ không gian hoặc khu vực chỉ định. ")
 addNewLine(rtffile)
 
-addParagraph(rtffile, "\\b \\fs32 HASIL REKONSILIASI \\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs32 KẾT QUẢ THỐNG NHẤT \\b0 \\fs20")
 addParagraph(rtffile, line)
-addParagraph(rtffile, "Pada bagian ini ditunjukkan hasil proses rekonsiliasi dengan menggunakan peta referensi ")
+addParagraph(rtffile, "Phần này trình bày biện pháp giải quyết cuối cùng bằng bản đồ tham chiếu ")
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)

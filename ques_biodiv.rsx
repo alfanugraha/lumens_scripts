@@ -1447,18 +1447,18 @@ for(p in 1:length(fa_class)){
     # define location_rpt to replace "_" with space
     location_rpt <- gsub("_", " ", location)
     # title<-"\\b\\fs32 LUMENS-QUES Project Report\\b0\\fs20"
-    title<-"\\b\\fs32 Laporan Proyek LUMENS-\\i QUES\\b0\\fs32"
+    title<-"\\b\\fs32 Báo cáo dự án LUMENS-\\i QUES\\b0\\fs32"
     # sub_title<-"\\b\\fs28 Sub-modules: Biodiversity Analysis\\b0\\fs20"
-    sub_title<-"\\b\\fs28 Sub-modul: Analisis Biodiversitas\\b0\\fs28"
+    sub_title<-"\\b\\fs28 Sub-modul: Phân tích đa dạng sinh học\\b0\\fs28"
     test<-as.character(Sys.Date())
-    date<-paste("Tanggal : ", test, sep="")
-    t_start<-paste("Proses dimulai : ", time_start, sep="")
-    time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+    date<-paste("Ngày : ", test, sep="")
+    t_start<-paste("Bắt đầu : ", time_start, sep="")
+    time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
     line<-paste("------------------------------------------------------------------------------------------------------------------------------------------")
     area_name_rep<-paste0("\\b", "\\fs22 ", location_rpt, "\\b0","\\fs22")
     I_O_period_1_rep<-paste0("\\b","\\fs22 ", as.character(pd_1), "\\b0","\\fs22")
     I_O_period_2_rep<-paste0("\\b","\\fs22 ", as.character(pd_2), "\\b0","\\fs22")
-    chapter1<-"\\b\\fs28 1. DATA INPUT\\b0\\fs28"
+    chapter1<-"\\b\\fs28 1. DỮ LIỆU ĐẦU VÀO\\b0\\fs28"
     chapter2<-"\\b\\fs28 2. PERUBAHAN AREA FOKAL\\b0\\fs28"
     chapter3<-"\\b\\fs28 3. DISTRIBUSI NILAI IKTT\\b0\\fs28"
     chapter4<-"\\b\\fs28 4. \\i DEGREE OF INTEGRATION OF FOCAL AREA\\i0  (\\i DIFA\\i0 )\\b0\\fs28"
@@ -1466,14 +1466,14 @@ for(p in 1:length(fa_class)){
     chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
     
     # ==== Report 0. Cover=====
-    rtffile <- RTF("QUES-B_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+    rtffile <- RTF("QUES-B_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
     # INPUT
     img_location <- paste0(LUMENS_path, "/ques_cover.png")
     # loading the .png image to be edited
     cover <- image_read(img_location)
     # to display, only requires to execute the variable name, e.g.: "> cover"
     # adding text at the desired location
-    text_submodule <- paste("Sub-Modul Keanekaragaman Hayati\n\nAnalisis Biodiversitas Bentang Lahan\n", location_rpt, ", ", "Periode ", pd_1, "-", pd_2, sep="")
+    text_submodule <- paste("Tiểu Mô-Đun đa dạng sinh học\n\nPhân tích cảnh quan đa dạng sinh học\n", location_rpt, ", ", "giai đoạn ", pd_1, "-", pd_2, sep="")
     cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
     cover_image <- image_write(cover_image)
     # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -1494,68 +1494,68 @@ for(p in 1:length(fa_class)){
     addParagraph(rtffile, line)
     # ==== Report 0.1 Table of Contents page====
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    addHeader(rtffile, title = "\\qc\\b\\fs28 DAFTAR ISI\\b0\\fs28", TOC.level = 1)
+    addHeader(rtffile, title = "\\qc\\b\\fs28 Mục lục\\b0\\fs28", TOC.level = 1)
     addNewLine(rtffile, n = 1.5)
     addTOC(rtffile)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     
     # ==== Report 0.2 Preface ====
     addNewLine(rtffile)
-    text <- paste0("\\qj Dokumen ini dihasilkan dari penjalanan modul \\i Quantification of Ecosystem Services - Biodiversity (QUES-B) \\i0 dalam perangkat lunak LUMENS. Sistematika laporan ini adalah: pengantar yang memuat prinsip dasar analisis terdapat di bagian ini, informasi mengenai data-data yang digunakan pada bagian 1, sedangkan bagian 2 - 6 memuat intisari luaran analisis modul  \\i QUES-B\\i0 . Pada setiap bagian terdapat petunjuk singkat yang disediakan demi kemudahan pengguna dalam menginterpretasi informasi dan/atau data yang ditampilkan.")
+    text <- paste0("\\qj Tài liệu này được tạo ra tự động bởi mô-đun \\i Định lượng dịch vụ hệ sinh thái - Đa dạng sinh học (QUES-B) \\i0 )trong phần mềm LUMENS. Báo cáo này được tổ chức như sau: 1.) giới thiệu và mô tả nguyên tắc cơ bản của phân tích được tiến hành , 2.) phần 1 mô tả dữ liệu được sử dụng , 3.) phần 2 đến 6 tóm tắt các kết quả  \\i QUES-B\\i0 . Mỗi phần có hướng dẫn ngắn gọn cho phép người dùng diễn giải thông tin và / hoặc dữ liệu được hiển thị.")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n = 1)
-    text <- paste0("\\qj Analisis dalam modul \\i QUES-B \\i0 bertujuan untuk memberi gambaran mengenai aspek biodiversitas suatu daerah di tingkat lanskap. Kerangka kerja yang diadopsi mengacu pada metode penelitian yang telah dipublikasikan oleh Dewi, dkk. pada tahun 2013. Sebelum proses dijalankan, pengguna menentukan kelas-kelas tutupan lahan alami yang paling merepresentasikan habitat bagi keanekaragaman hayati asli suatu lanskap. Berdasarkan peta tutupan lahan multi waktu, dinamika kondisi tutupan alami dianalisis dalam modul \\i QUES-B \\i0 sehingga dihasilkan beberapa besaran yang mengindikasikan perubahan luas dan konfigurasi tutupan alami di suatu daerah studi. Peralihan tutupan lahan yang berkontribusi terhadap dinamika kondisi tutupan alami dan luasannya dapat diketahui berdasarkan luaran modul ini. Selain itu, informasi mengenai perubahan luas dan konfigurasi tutupan alami suatu daerah disajikan secara kuantitatif dalam indeks tunggal yang disebut \\i Degree of Integration of Focal Area (DIFA)\\i0 . Indeks yang ringkas sekaligus indikatif ini akan membantu pemangku kepentingan yang harus mempertimbangan banyak aspek dalam analisis kebijakan pengelolaan lahan, khususnya dalam memperkirakan implikasi suatu keputusan terhadap kelestarian biodiversitas suatu daerah. Informasi kewilayahan juga turut melengkapi luaran modul ini untuk membantu proses dialog dan kolaborasi antar pemangku kepentingan dalam perencanaan dan pengelolaan daerah yang memperhatikan kelestarian keanekaragaman hayati.")
+    text <- paste0("\\qj Phân tích trong mô-đun \\i QUES-B \\i0 được thực hiện để đưa ra một số chỉ tiêu mô tả trạng thái đa dạng sinh học ở cấp độ cảnh quan . Khung được triển khai được thông qua từ một bài báo được viết bởi Dewi et al. 2013. Trước khi quá trình bắt đầu, người dùng sẽ chọn các lớp sử dụng / che phủ đất được coi là lớp che phủ môi trường sống tự nhiên, gọi là các lớp trọng điểm, trong suốt quá trình phân tích . Trạng thái của các lớp khu vực trọng điểm được phân tích định lượng dựa trên các bản đồ che phủ đất theo chuỗi thời gian . Điều này sẽ dẫn đến nhiều chỉ số nhạy cảm với tính năng động của các khu vực trọng tâm, ví dụ: xuống cấp, mất, tăng hoặc phục hồi, cũng như cấu hình không gian của nó . Các thay đổi che phủ đất liên quan đến khu vực trọng điểm được xác định và trình bày trong báo cáo . Ngoài ra, thông tin về những thay đổi của khu vực trọng điểm và cấu hình của nó được tóm tắt dưới dạng một chỉ số duy nhất có tên \\i Mức độ tích hợp của khu vực trọng điểm (DIFA)\\i0 . DIFA được xây dựng để đơn giản nhưng đủ toàn diện để thông báo cho các bên liên quan về tình trạng toàn vẹn hệ sinh thái tự nhiên trong phạm vi lợi ích. Thông tin này sẽ cho phép các nhà quản lý cảnh quan định lượng tác động tiềm tàng của các quyết định nhất định đối với đa dạng sinh học cấp cảnh quan.")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n = 0.5)
     addNewLine(rtffile, n = 1)
     #==== Report I. DATA INPUT ====
     addHeader(rtffile, chapter1, TOC.level = 1)
     addNewLine(rtffile, n = 1.5)
-    text <- paste0("\\qj Analisis dalam modul \\i QUES-B \\i0 dijalankan berdasarkan masukan data berupa tabel dan peta. Tabel yang diperlukan antara lain tabel bobot kontras tepi (\\i edge contrast weight\\i0) yang memuat angka derajat perbedaan antara suatu kelas tutupan lahan terhadap kelas lainnya dalam memfasilitasi keberadaan biodiversitas asli dari area fokal. Peta tutupan lahan serta peta unit perencanaan adalah data-data spasial yang menjadi masukan utama dalam analisis. Peta tutupan lahan digunakan sebagai dasar dari penghitungan luas dan konfigurasi spasial area fokal dalam daerah studi. Penggunaan peta tutupan lahan pada dua titik waktu membuat analisis dinamika area fokal antar waktu dapat dilakukan. Pemahaman mengenai hubungan erat antara subjek pengelolaan kawasan yang beragam dengan kondisi area fokal suatu daerah melatarbelakangi pelibatan peta unit perencanaan dalam tahap penyajian hasil analisis. ")
+    text <- paste0("\\qj Các đầu vào theo yêu cầu của mô-đun được cung cấp dưới dạng một số bản đồ và bảng . Bảng phải chứa trọng lượng tương phản cạnh của từng cặp lớp che phủ đất tồn tại trong cảnh quan nghiên cứu . Trọng lượng này chỉ ra mức độ khác biệt giữa lớp trọng điểm nhất định với các lớp che phủ đất khác về mặt tạo điều kiện cho sự sống của đa dạng sinh học tự nhiên . Các bản đồ được sử dụng trong mô-đun là: bản đồ che phủ đất theo chuỗi thời gian và bản đồ đơn vị quy hoạch. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Pada bagian ini ditampilkan data-data spasial yang digunakan sebagai masukan dalam analisis. Analisis mencakup daerah seluas ", prettyNum(round(sum(area_lc1$count)*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar. Tutupan lahan pada daerah analisis digolongkan dalam ", nrow(lulc_lut), " kelas seperti yang ditampilkan pada peta. Selain itu, terdapat ", nrow(lookup_z.area), " unit perencanaan yang menunjukkan tipologi kawasan pengelolaan.")
+    text <- paste0("\\qj Phần sau đây chỉ ra dữ liệu được sử dụng làm đầu vào trong phân tích . Phân tích được thực hiện cho một cảnh quan bao phủ diện tích ", prettyNum(round(sum(area_lc1$count)*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " ha. Cảnh quan được phân loại thành các lớp ", nrow(lulc_lut), " như được hiển thị trong bản đồ che phủ đất . Có các đơn vị lập kế hoạch ", nrow(lookup_z.area), " được xác định trong khu vực quan tâm.")
     addParagraph(rtffile, text)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    text <- paste0("\\b Peta Tutupan Lahan \\b0", area_name_rep,"  \\b tahun \\b0", I_O_period_1_rep)
+    text <- paste0("\\b Bản đồ che phủ đất \\b0", area_name_rep,"  \\b năm  \\b0", I_O_period_1_rep)
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.LU1 )
     #rm(plot.LU1)
-    text <- paste0("\\b Peta Tutupan Lahan \\b0", area_name_rep, "  \\b tahun \\b0", I_O_period_2_rep)
+    text <- paste0("\\b Bản đồ che phủ đất \\b0", area_name_rep, "  \\b năm  \\b0", I_O_period_2_rep)
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.LU2 )
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     #rm(plot.LU2)
-    text <- paste("\\b Peta Unit Perencanaan\\b0 ", area_name_rep, sep=" ")
+    text <- paste("\\b Bản đồ đơn vị quy hoạch\\b0 ", area_name_rep, sep=" ")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height = (4 + 0.24 + round(nrow(lookup_z.area)/2, digits = 0)*0.14), res=150, plot.Z )
     #rm(plot.Z)
     addNewLine(rtffile, n=1)
-    text <- paste0("\\b Kelas tutupan lahan yang dijadikan sebagai area fokal: ", names(fa_class[p]), "\\b0")
+    text <- paste0("\\b Lớp trọng điểm được phân tích: ", names(fa_class[p]), "\\b0")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n = 0.5)
     addNewLine(rtffile, n = 1)
     #==== Report II. Focal Area Changes ====
     addHeader(rtffile, chapter2, TOC.level = 1)
     addNewLine(rtffile, n=1.5)
-    text <- paste0("\\qj Dalam \\i QUES-B \\i0 digunakan istilah area fokal yang didefinisikan sebagai kelas tutupan lahan yang mewakili habitat bagi keanekaragaman hayati asli suatu daerah dalam kondisi primer. Suatu daerah studi dapat saja memiliki lebih dari satu jenis area fokal namun proses analisis dilangsungkan secara unik per area fokal. Dalam analisis dinamika area fokal, modul \\i QUES-B \\i0 memperhitungkan tak hanya luas namun juga konfigurasi spasialnya. Dengan kata lain, konektifitas dan diskonektifitas antara petak-petak area fokal mempengaruhi luaran analisis \\i QUES-B\\i0. ")
+    text <- paste0("\\qj Thuật ngữ “lớp trọng điểm” sử dụng trong QUES-B được định nghĩa là lớp che phủ đất đại diện cho môi trường sống tự nhiên không bị xáo trộn về mặt đa dạng sinh học xảy ra trong cảnh quan . Một cảnh quan cụ thể có thể chứa nhiều hơn một lớp trọng điểm nhưng mỗi lớp trọng điểm được phân tích độc lập . Như đã đề cập trước đó, QUES-B không chỉ tính đến diện tích của lớp trọng điểm mà còn cả cấu hình không gian của nó . Do đó, sự kết nối và phân mảnh xảy ra trong cảnh quan sẽ được ghi lại trong kết quả. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Bagian ini memuat informasi mengenai perubahan luas area fokal dan perubahan tutupan lahan yang berkaitan. Luas perubahan tutupan lahan dan area fokal terdampak serta statistik lanskap dasar yang mendeskripsikan kondisi umum area fokal secara kuantitatif tersaji dalam bentuk tabel. Selain itu, peta area fokal pada dua titik waktu yang berbeda juga ditampilkan untuk memberikan gambaran visual mengenai dimensi spasial dari dinamika yang terjadi. Pada tabel kedua sebelum terakhir ditunjukkan dinamika luas area fokal pada setiap unit perencanaan serta proporsi relatif luas area fokal terdampak terhadap luas total unit perencanaan (dalam %). ")
+    text <- paste0("\\qj Phần này tóm tắt các thay đổi che phủ đất liên quan đến sự biến động khu vực trọng điểm . Mức độ thay đổi được ghi lại, cũng như thống kê cảnh quan cơ bản, được trình bày một cách định lượng dưới dạng bảng. Không gian của các thay đổi khu vực trọng điểm xảy ra cũng được hiển thị dưới dạng bản đồ ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
     text <- paste0("\\qj Dalam analisis \\i QUES-B \\i0 secara keseluruhan terdapat ", length(fa_class), " kelas tutupan lahan yang didefinisikan sebagai area fokal. Laporan ini membahas secara spesifik satu kelas tutupan area fokal, yaitu ", names(fa_class[p]), ". Pada kondisi utuh yang didefinisikan berdasarkan peta tutupan lahan tahun ", pristine_pd, ", ", names(fa_class[p]), " mencakup area seluas ", prettyNum(round(totarea*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar. Pada tahun ", pd_1, " dan ", pd_2, " luas area fokal yang tersisa adalah ", prettyNum(round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]/totarea*100, digits = 2),"%) dan ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]/totarea*100, digits = 2), "%), secara berurutan. Dengan kata lain, selama ", pd_2-pd_1, " tahun terdapat perubahan luas area fokal sebesar ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar atau sebanding dengan ", round(abs(100*(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)/(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)), digits = 2), "% dari luas pada tahun ", pd_1, ".")
     addParagraph(rtffile, text)
     if(maxValue(chk_loss)>0) {
       addNewLine(rtffile)
-      text <- paste("\\b Peta Kelenyapan Area Fokal \\b0", area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
+      text <- paste("\\b Mất khu vực trọng điểm ở \\b0", area_name_rep, "  \\b giai đoạn \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
       addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.FAC.loss )
       addNewLine(rtffile, n=1)
-      text <- paste("\\b Tutupan Lahan Terasosiasi dengan Kelenyapan Area Fokal \\b0",area_name_rep, " \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0", I_O_period_2_rep,  sep=" ")
+      text <- paste("\\b Các lớp che phủ đất liên quan đến mất khu vực trọng điểm \\b0",area_name_rep, " \\b giai đoạn \\b0", I_O_period_1_rep, "\\b -\\b0", I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(foc.area.loss.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
       addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
@@ -1568,11 +1568,11 @@ for(p in 1:length(fa_class)){
       if(maxValue(chk_loss)>0){
         addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
       } else addNewLine(rtffile, n=1)
-      text <- paste("\\b Peta Kemunculan Area Fokal \\b0", area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
+      text <- paste("\\b Peta Kemunculan Area Fokal \\b0", area_name_rep, "  \\b giai đoạn \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
       addParagraph(rtffile, text)
       addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.FAC.gain )
       addNewLine(rtffile, n=1)
-      text <- paste("\\b Tutupan Lahan Sebelum Kemunculan Area Fokal\\b0 ",area_name_rep,  " \\b periode \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
+      text <- paste("\\b Tutupan Lahan Sebelum Kemunculan Area Fokal\\b0 ",area_name_rep,  " \\b giai đoạn \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(foc.area.gain.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
       addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")

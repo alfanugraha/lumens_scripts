@@ -324,7 +324,7 @@ admin_carbon[,4:7]<-round(admin_carbon[,4:7], digits=2)
 
 #=Create final summary of emission calculation at landscape level
 fs_id<-c(1,2,3,4,5,6,7)
-fs_cat<-c("Period", "Total area", "Total Emisi (Ton CO2-eq)", "Total Sequestrasi (Ton CO2-eq)", "Emisi Bersih (Ton CO2-eq)", "Laju Emisi (Ton CO2-eq/tahun)","Laju emisi per-unit area (Ton CO2-eq/ha.tahun)")
+fs_cat<-c("Giai đoạn", "Tổng diện tích", "Tổng lượng phát thải (Tấn CO2-eq)", "Tổng lượng cô lập (Tấn CO2-eq)", "Lượng phát thải ròng (Tấn CO2-eq)", "Tỷ lệ phát thải (Tấn CO2-eq/year)","Tỷ lệ phát thải trên 1 đơn vị diện tích (Tấn CO2-eq/ha.year)")
 fs_em<-sum(zone_carbon$Em_tot)
 fs_sq<-sum(zone_carbon$Sq_tot)
 fs_Nem<-fs_em-fs_sq
@@ -333,7 +333,7 @@ fs_ARem<-fs_Rem/area
 fs_summary<-c(proj_prop$period, area,round(fs_em, digits=2),round(fs_sq, digits=2),round(fs_Nem, digits=2),round(fs_Rem, digits=2),round(fs_ARem, digits=2))
 fs_table<-data.frame(fs_id,fs_cat,fs_summary)
 fs_table$fs_summary<-as.character(fs_table$fs_summary)
-colnames(fs_table)<-c("ID", "Kategori", "Ringkasan")
+colnames(fs_table)<-c("ID", "Danh mục", "Tổng hợp")
 
 #=Create QUES-C database
 #=Zonal statistics database
@@ -506,12 +506,12 @@ dbWriteTable(DB, "list_of_data_lut", list_of_data_lut, append=TRUE, row.names=FA
 
 #=Rearrange zone carbon
 zone_carbon_pub<-zone_carbon
-colnames(zone_carbon_pub) <- c("ID", "Luas (Ha)", "Tutupan lahan", "Total emisi (Ton CO2-eq)", "Total sekuestrasi(Ton CO2-eq)", "Emisi bersih (Ton CO2-eq)", "Laju emisi (Ton CO2/Ha.yr)")
+colnames(zone_carbon_pub) <- c("ID", "Diện tích (Ha)", "Sử dung/che phủ đất", "Tổng lượng phát thải (Tấn CO2-eq)", "Tổng lượng cô lập (Tấn CO2-eq)", "Lượng phát thải ròng (Tấn CO2-eq)", "Tỷ lệ phát thải (Tấn CO2/Ha.năm)")
 admin_carbon_pub<-admin_carbon
-colnames(admin_carbon_pub) <- c("ID", "Luas (Ha)", "Wil. Administratif", "Total emisi (Ton CO2-eq)", "Total sekuestrasi(Ton CO2-eq)", "Emisi bersih (Ton CO2-eq)", "Laju emisi (Ton CO2/Ha.yr)")
+colnames(admin_carbon_pub) <- c("ID", "Diện tích (Ha)", "Khu vực hành chính", "Tổng lượng phát thải (Tấn CO2-eq)", "Tổng lượng cô lập (Tấn CO2-eq)", "Lượng phát thải ròng (Tấn CO2-eq)", "Tỷ lệ phát thải (Tấn CO2/Ha.năm)")
 data_zone_pub<-data_zone
 data_zone_pub$Z_CODE<-NULL
-colnames(data_zone_pub) <- c("ID", "Luas (Ha)", "Unit Perencanaan", "Rerata Karbon Periode 1", "Rerata Karbon Periode 2", "Emisi bersih", "Laju emisi")
+colnames(data_zone_pub) <- c("ID", "Diện tích (Ha)", "Đơn vị quy hoạch", "Lượng Các bon trung bình gd 1", "Lượng Các bon trung bình gd 2", "Lượng phát thải ròng", "Tỷ lệ phát thải")
 
 #=Create QUES-C Report (.doc)
 # create maps and charts for report
@@ -538,7 +538,7 @@ lu1<-merge(lu1,lookup_lc, by="ID")
 lu1$ID<-as.numeric(as.character(lu1$ID))
 lu1<-lu1[order(lu1$ID),]
 lu1<-rbind(lu1, c(0, NA, NA, '#FFFFFF')) # new line
-ColScale.lu1<-scale_fill_manual(name="Tipe tutupan lahan t1", breaks=lu1$ID, labels=lu1$LC, values=lu1$Colors)
+ColScale.lu1<-scale_fill_manual(name="LC type t1", breaks=lu1$ID, labels=lu1$LC, values=lu1$Colors)
 plot.LU1<-gplot(landuse1, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
   coord_equal() + ColScale.lu1 +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -558,7 +558,7 @@ lu2<-merge(lu2,lookup_lc, by="ID")
 lu2$ID<-as.numeric(as.character(lu2$ID))
 lu2<-lu2[order(lu2$ID),]
 lu2<-rbind(lu2, c(0, NA, NA, '#FFFFFF')) # new line
-ColScale.lu2<-scale_fill_manual(name="Tipe tutupan lahan t2", breaks=lu2$ID, labels=lu2$LC, values=lu2$Colors)
+ColScale.lu2<-scale_fill_manual(name="LC type t2", breaks=lu2$ID, labels=lu2$LC, values=lu2$Colors)
 plot.LU2<-gplot(landuse2, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
   coord_equal() + ColScale.lu2 +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -581,7 +581,7 @@ pu<-within(pu, {Colors<-ifelse(is.na(Colors), "#FFFFFF", Colors)})
 pu$ID<-as.numeric(as.character(pu$ID))
 pu<-pu[order(pu$ID),]
 # pu<-rbind(pu, c(0, NA, NA, '#FFFFFF'))
-ColScale.Z<-scale_fill_manual(name="Kelas Unit Perencanaan", breaks=pu$ID, labels=pu$Z_NAME, values=pu$Colors)
+ColScale.Z<-scale_fill_manual(name="Zone Class", breaks=pu$ID, labels=pu$Z_NAME, values=pu$Colors)
 plot.Z<-gplot(zone, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
   coord_equal() + ColScale.Z +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -594,7 +594,7 @@ plot.Z<-gplot(zone, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) 
 
 # administrative 
 myColors.Admin <- myColors[1:(length(unique(lookup_ref$ID))+1)]
-ColScale.Admin<-scale_fill_manual(name="Wilayah Administratif", breaks=lookup_ref$ID, labels=lookup_ref$KABKOT, values=myColors.Admin)
+ColScale.Admin<-scale_fill_manual(name="Administrative level", breaks=lookup_ref$ID, labels=lookup_ref$KABKOT, values=myColors.Admin)
 plot.Admin<-gplot(ref, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
   coord_equal() + ColScale.Admin +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
@@ -637,7 +637,7 @@ resave(idx_QUESC, idx_lut, idx_factor, file=proj.file)
 y<-ceiling( maxValue(carbon1)/100)
 y<-y*100
 plot.C1  <- gplot(carbon1, maxpixels=100000) + geom_raster(aes(fill=value)) + coord_equal() +
-  scale_fill_gradient(name="Kerapatan karbon",low = "#FFCC66", high="#003300",limits=c(0,y), breaks=c(0,10,20,50,100,200,300), guide="colourbar") +
+  scale_fill_gradient(name="Carbon desnsity",low = "#FFCC66", high="#003300",limits=c(0,y), breaks=c(0,10,20,50,100,200,300), guide="colourbar") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -647,7 +647,7 @@ plot.C1  <- gplot(carbon1, maxpixels=100000) + geom_raster(aes(fill=value)) + co
          legend.key.width = unit(0.375, "cm"))
 # carbon t2 map
 plot.C2  <- gplot(carbon2, maxpixels=100000) + geom_raster(aes(fill=value)) + coord_equal() +
-  scale_fill_gradient(name="Kerapatan karbon",low = "#FFCC66", high="#003300",limits=c(0,y), breaks=c(0,10,20,50,100,200,300), guide="colourbar") +
+  scale_fill_gradient(name="Carbon desnsity",low = "#FFCC66", high="#003300",limits=c(0,y), breaks=c(0,10,20,50,100,200,300), guide="colourbar") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -657,7 +657,7 @@ plot.C2  <- gplot(carbon2, maxpixels=100000) + geom_raster(aes(fill=value)) + co
          legend.key.width = unit(0.375, "cm"))
 # carbon emission map
 plot.E  <- gplot(emission, maxpixels=100000) + geom_raster(aes(fill=value)) + coord_equal() +
-  scale_fill_gradient(name="Emisi (ton CO2-eq)",low = "#FFCC66", high="#FF0000", guide="colourbar") +
+  scale_fill_gradient(name="Emission (ton CO2-eq)",low = "#FFCC66", high="#FF0000", guide="colourbar") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -667,7 +667,7 @@ plot.E  <- gplot(emission, maxpixels=100000) + geom_raster(aes(fill=value)) + co
          legend.key.width = unit(0.375, "cm"))
 # carbon sequestration map
 plot.S  <- gplot(sequestration, maxpixels=100000) + geom_raster(aes(fill=value)) + coord_equal() +
-  scale_fill_gradient(name="Sequestrasi (ton CO2-eq)",low = "#FFCC66", high="#000033", guide="colourbar") +
+  scale_fill_gradient(name="Sequestration (ton CO2-eq)",low = "#FFCC66", high="#000033", guide="colourbar") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -684,7 +684,7 @@ rcl.m<-rbind(rcl.m, c(0, NA))
 Z.Avg.C.t1<-reclassify(zone, rcl.m)
 plot.Z.Avg.C.t1<-gplot(Z.Avg.C.t1, maxpixels=100000) + geom_raster(aes(fill=value)) +
   coord_equal() + scale_fill_gradient(name="Carbon Density Level",low = "#FFCC66", high="#003300", guide="colourbar") +
-  ggtitle(paste("Rerata Kerapatan Karbon", location, period1 )) +
+  ggtitle(paste("Mật độ các bon trung bình tại địa", location, period1 )) +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -700,7 +700,7 @@ rcl.m<-rbind(rcl.m, c(0, NA))
 Z.Avg.C.t2<-reclassify(zone, rcl.m)
 plot.Z.Avg.C.t2<-gplot(Z.Avg.C.t2, maxpixels=100000) + geom_raster(aes(fill=value)) +
   coord_equal() + scale_fill_gradient(name="Carbon Density Level",low = "#FFCC66", high="#003300", guide="colourbar") +
-  ggtitle(paste("Rerata Kerapatan Karbon", location, period2 )) +
+  ggtitle(paste("Mật độ các bon trung bình tại địa", location, period2 )) +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -715,8 +715,8 @@ rcl.m<-cbind(rcl.m.c1,rcl.m.c2)
 rcl.m<-rbind(rcl.m, c(0, NA))
 Z.Avg.em<-reclassify(zone, rcl.m)
 plot.Z.Avg.em<-gplot(Z.Avg.em, maxpixels=100000) + geom_raster(aes(fill=value)) +
-  coord_equal() + scale_fill_gradient(name="Tingkat Emisi",low = "#fff5f0", high="#67000d", guide="colourbar") +
-  ggtitle(paste(" Rerata laju emisi", location, period1, "-", period2 )) +
+  coord_equal() + scale_fill_gradient(name="Level Emission",low = "#fff5f0", high="#67000d", guide="colourbar") +
+  ggtitle(paste("Tỷ lệ phát thải trung bình tại địa", location, period1, "-", period2 )) +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -731,8 +731,8 @@ rcl.m<-cbind(rcl.m.c1,rcl.m.c2)
 rcl.m<-rbind(rcl.m, c(0, NA))
 Z.Avg.sq<-reclassify(zone,rcl.m)
 plot.Z.Avg.sq<-gplot(Z.Avg.sq, maxpixels=100000) + geom_raster(aes(fill=value)) +
-  coord_equal() + scale_fill_gradient(name="Tingkat Sequestrasi",low = "#fff5f0", high="#67000d", guide="colourbar") +
-  ggtitle(paste("Rerata laju sequestrasi", location, period1, "-", period2 )) +
+  coord_equal() + scale_fill_gradient(name="Level Sequestration",low = "#fff5f0", high="#67000d", guide="colourbar") +
+  ggtitle(paste("Tỷ lệ cô lập trung bình tại địa", location, period1, "-", period2 )) +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme( axis.title.x=element_blank(),axis.title.y=element_blank(),
          panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
@@ -744,21 +744,21 @@ plot.Z.Avg.sq<-gplot(Z.Avg.sq, maxpixels=100000) + geom_raster(aes(fill=value)) 
 # emission rate
 emissionRate<-ggplot(data=zone_carbon, aes(x=reorder(Z_NAME, -Net_em_rate), y=(zone_carbon$Net_em_rate))) + geom_bar(stat="identity", fill="Red") +
   geom_text(data=zone_carbon, aes(label=round(Net_em_rate, 1)),size=4) +
-  ggtitle(paste("Rerata laju emisi bersih", location, period1,"-", period2 )) + guides(fill=FALSE) + ylab("CO2-eq/ha.yr") +
+  ggtitle(paste("Tỷ lệ phát thải ròng trung bình tại", location, period1,"-", period2 )) + guides(fill=FALSE) + ylab("CO2-eq/ha.yr") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) +
   theme(axis.title.x=element_blank(), axis.text.x = element_text(angle=20),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 # largest emission
 largestEmission<-ggplot(data=tb_em_total_10, aes(x=reorder(LU_CODE, -em), y=(em))) + geom_bar(stat="identity", fill="blue") +
   geom_text(data=tb_em_total_10, aes(x=LU_CODE, y=em, label=round(em, 1)),size=3, vjust=0.1) +
-  ggtitle(paste("Sumber emisi terbesar", location )) + guides(fill=FALSE) + ylab("CO2-eq") +
+  ggtitle(paste("Nguồn phát thải lớn nhất", location )) + guides(fill=FALSE) + ylab("CO2-eq") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
   theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 # largest sequestration
 largestSeq<-ggplot(data=tb_seq_total_10, aes(x=reorder(LU_CODE, -seq), y=(seq))) + geom_bar(stat="identity", fill="green") +
   geom_text(data=tb_seq_total_10, aes(x=LU_CODE, y=seq, label=round(seq, 1)),size=3, vjust=0.1) +
-  ggtitle(paste("Sumber sequestrasi terbesar", location )) + guides(fill=FALSE) + ylab("CO2-eq") +
+  ggtitle(paste("Nguồn cô lập lớn nhất", location )) + guides(fill=FALSE) + ylab("CO2-eq") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
   theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank())
@@ -773,33 +773,33 @@ printRate <- function(x){
 tabel_ket<-proj_descr
 row.names(tabel_ket)<-NULL
 tabel_ket$Type<-as.character(tabel_ket$Type)
-colnames(tabel_ket)<-c("Tipe", "Keterangan")
-tabel_ket[1,1]<-"Proyek"
-tabel_ket[2,1]<-"Deskripsi"
-tabel_ket[3,1]<-"Direktori"
-tabel_ket[4,1]<-"Wilayah Analisis"
-tabel_ket[5,1]<-"Provinsi"
-tabel_ket[6,1]<-"Negara"
+colnames(tabel_ket)<-c("Type", "Description")
+tabel_ket[1,1]<-"Dự án"
+tabel_ket[2,1]<-"Mô tả"
+tabel_ket[3,1]<-"Đường dẫn tệp"
+tabel_ket[4,1]<-"Địa phương"
+tabel_ket[5,1]<-"Tỉnh"
+tabel_ket[6,1]<-"Quốc gia"
 
 # write report
-title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1HASIL ANALISIS \\par\\b0\\fs20\\ql\\cf1"
-title2<-paste("\\pard\\qr\\b\\fs40\\cf1 Modul QUES-C - Analisis Dinamika Cadangan Karbon \\par\\b0\\fs20\\ql\\cf1", sep="")
-sub_title<-"\\cf2\\b\\fs32 ANALISIS DINAMIKA CADANGAN KARBON\\cf1\\b0\\fs20"
+title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1KẾT QUẢ PHÂN TÍCH  \\par\\b0\\fs20\\ql\\cf1"
+title2<-paste("\\pard\\qr\\b\\fs40\\cf1 Modul QUES-C - Phân tích sự biến động trữ lượng các bon \\par\\b0\\fs20\\ql\\cf1", sep="")
+sub_title<-"\\cf2\\b\\fs32 PHÂN TÍCH SỰ BIẾN ĐỘNG TRỮ LƯỢNG CÁC BON\\cf1\\b0\\fs20"
 #rad_grk<-"\\pard\\qr\\b\\fs40\\cf1 Dokumen RAD GRK - Bab 2.3. Permasalahan Emisi GRK \\par\\b0\\fs20\\ql\\cf1"
 test<-as.character(Sys.Date())
-date<-paste("Date : ", test, sep="")
-time_start<-paste("Proses dimulai : ", time_start, sep="")
-time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+date<-paste("Ngày : ", test, sep="")
+time_start<-paste("Bắt đầu : ", time_start, sep="")
+time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 I_O_period_1_rep<-paste("\\b","\\fs20", period1)
 I_O_period_2_rep<-paste("\\b","\\fs20", period2)
-chapter1<-"\\b\\fs32 DATA YANG DIGUNAKAN \\b0\\fs20"
-chapter2<-"\\b\\fs32 ANALISIS PADA TINGKAT BENTANG LAHAN \\b0\\fs20"
-chapter3<-"\\b\\fs32 ANALISIS PADA TINGKAT UNIT PERENCANAAN \\b0\\fs20"
+chapter1<-"\\b\\fs32 DANH SÁCH DỮ LIỆU ĐẦU VÀO  \\b0\\fs20"
+chapter2<-"\\b\\fs32 PHÂN TÍCH Ở CẤP ĐỘ QUANG CẢNH \\b0\\fs20"
+chapter3<-"\\b\\fs32 PHÂN TÍCH Ở CẤP ĐỘ ĐƠN VỊ QUY HOẠCH \\b0\\fs20"
 
 # ==== Report 0. Cover=====
-rtffile <- RTF("QUES-C_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("QUES-C_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
 file.copy(paste0(LUMENS_path, "/ques_cover.png"), dirQUESC, recursive = FALSE)
 img_location<-paste0(dirQUESC, "/ques_cover.png")
@@ -807,7 +807,7 @@ img_location<-paste0(dirQUESC, "/ques_cover.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul Karbon\n\nAnalisis Dinamika Cadangan Karbon\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+text_submodule <- paste("Tiểu Mô-Đun Các Bon\n\nPhân tích sự biến động trữ lượng các bon tại địa phương\n", location, ", ", "giai đoạn  ", T1, "-", T2, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -857,30 +857,30 @@ addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Analisis dinamika cadangan karbon dilakukan untuk perubahan cadangan karbon di suatu daerah pada satu kurun waktu. Metode yang digunakan adalah metode Stock Difference. Emisi dihitung sebagai jumlah penurunan cadangan karbon akibat perubahan tutupan lahan terjadi apabila cadangan karbon awal lebih tinggi dari cadangan karbon setelah terjadinya perubahan penggunaan lahan. Sebaliknya, sequestrasi dihitung sebagai jumlah penambahan cadangan karbon akibat perubahan tutupan lahan (cadangan karbon pada penggunaan lahan awal lebih rendah dari cadangan karbon setelah terjadinya perubahan penggunaan lahan).. Analisis ini dilakukan dengan menggunakan data peta tutupan lahan pada dua periode waktu yang berbeda dan tabel acuan kerapatan karbon untuk masing-masing tipe tutupan lahan. Selain itu, dengan memasukkan data unit perencanaan kedalam  analisis, dapat diketahui tingkat perubahan cadangan karbon pada masing-masing kelas unit perencanaan yang ada. Informasi yang dihasilkan melalui analisis ini dapat digunakan dalam proses perencanaan untuk berbagai hal, diantaranya menentukan prioritas aksi mitigasi perubahan iklim, mengetahui faktor pemicu terjadinya emisi, dan merencanakan skenario pembangunan di masa yang akan datang.")
+addParagraph(rtffile, "Phân tích sự biến động dự trữ các bon cho sự thay đổi trữ lượng các bon trong một khu vực nhất định tại một thời điểm nhất định. Phương pháp được sử dụng cho mô-đun này là Stock Difference. Lượng phát thải được tính bằng lượng giảm trữ lượng carbon từ thay đổi sử dụng / che phủ đất ban đầu với trữ lượng carbon cao trở thành trữ lượng carbon thấp. Mặt khác, sự cô lập được tính là lượng bổ sung carbon từ thay đổi sử dụng / che phủ đất ban đầu với trữ lượng carbon thấp trở thành trữ lượng carbon cao. Phân tích này đang sử dụng bản đồ sử dụng / che phủ đất giữa hai khoảng thời gian khác nhau và mật độ carbon làm bảng tham chiếu cho từng loại sử dụng đất. Ngoài ra, phân tích có thể được xác định cho từng lớp đơn vị quy hoạch với dữ liệu đơn vị quy hoạch hiện tại làm đầu vào. Thông tin từ các kết quả có thể được sử dụng cho quá trình lập kế hoạch khác nhau, ví dụ, xác định mức độ ưu tiên của hành động giảm thiểu biến đổi khí hậu, các yếu tố thúc đẩy phát thải và kịch bản phát triển trong tương lai.")
 addNewLine(rtffile)
 addParagraph(rtffile, chapter1)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Data yang digunakan dalam analisis ini adalah data peta penggunaan lahan dan data peta unit perencanaan daerah. Data pendukung yang digunakan adalah peta acuan tipe penggunaan lahan, data acuan kerapatan karbon masing-masing tipe tutupan lahan dan data acuan kelas unit perencanaan.")
+addParagraph(rtffile, "Dữ liệu được sử dụng trong phân tích này là bản đồ sử dụng / che phủ đất, bản đồ đơn vị quy hoạch, bản đồ tham chiếu các loại sử dụng/che phủ đất và lớp tham chiếu của đơn vị quy hoạch như dữ liệu được hỗ trợ.")
 addNewLine(rtffile)
 
-text <- paste("\\b \\fs20 Peta penutupan lahan \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_1_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ sử dung/che phủ đất địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 năm \\b0 \\fs20 ", I_O_period_1_rep, sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.4, height=4, res=150, plot.LU1 )
 #rm(plot.LU1)
-text <- paste("\\b \\fs20 Peta penutupan lahan \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_2_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ sử dung/che phủ đất địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 năm \\b0 \\fs20 ", I_O_period_2_rep, sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.LU2 )
 #rm(plot.LU2)
-text <- paste("\\b \\fs20 Peta unit perencanaan \\b0 \\fs20 ", area_name_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ đơn vị quy hoạch địa phương \\b0 \\fs20 ", area_name_rep, sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.Z )
 #rm(plot.Z)
-text <- paste("\\b \\fs20 Peta wilayah administratif \\b0 \\fs20 ", area_name_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ hành chính địa phương \\b0 \\fs20 ", area_name_rep, sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.Admin )
@@ -892,33 +892,33 @@ addNewLine(rtffile, n=1)
 addParagraph(rtffile, chapter2)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Pada bagian ini disajikan hasil analisis dinamika cadangan karbon untuk keseluruhan bentang lahan yang dianalisis. Beberapa bentuk analisis yang dilakukan antara lain: tingkat emisi, tingkat sequestrasi, laju emisi dan tipe perubahan penggunaan lahan yang paling banyak menyebabkan emisi/sequestrasi.")
+addParagraph(rtffile, "Phần này trình bày kết quả phân tích sự biến động trữ lượng carbon cho toàn bộ cảnh quan. Một số phân tích đo được: mức phát thải, mức cô lập, tỷ lệ phát thải và nguồn phát thải / cô lập lớn nhất từ loại sử dụng đất.")
 
 addNewLine(rtffile)
-text <- paste("\\b \\fs20 Peta kerapatan karbon \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_1_rep, " \\b \\fs20 (dalam Ton C/Ha)\\b0 \\fs20", sep="")
+text <- paste("\\b \\fs20 Bản đồ mật độ các bon địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 năm \\b0 \\fs20 ", I_O_period_1_rep, " \\b \\fs20 (Tấn C/Ha)\\b0 \\fs20", sep="")
 addParagraph(rtffile, text)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.C1 )
 #rm(plot.C1)
-text <- paste("\\b \\fs20 Peta kerapatan karbon \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_2_rep, " \\b \\fs20 (dalam Ton C/Ha)\\b0 \\fs20", sep="")
+text <- paste("\\b \\fs20 Bản đồ mật độ các bon địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 năm \\b0 \\fs20 ", I_O_period_2_rep, " \\b \\fs20 (Tấn C/Ha)\\b0 \\fs20", sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.C2 )
 addNewLine(rtffile, n=1)
 #rm(plot.C2)
-text <- paste("\\b \\fs20 Peta emisi karbon \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20 ", I_O_period_2_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ phát thải các bon địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 giai đoạn \\b0 \\fs20 ", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20 ", I_O_period_2_rep, sep="")
 addParagraph(rtffile, text)
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.E )
 addNewLine(rtffile, n=1)
 #rm(plot.E)
-text <- paste("\\b \\fs20 Peta penyerapan karbon \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 tahun \\b0 \\fs20 ", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20 ", I_O_period_2_rep, sep="")
+text <- paste("\\b \\fs20 Bản đồ cô lập các bon địa phương \\b0 \\fs20 ", area_name_rep, "\\b \\fs20 giai đoạn \\b0 \\fs20 ", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20 ", I_O_period_2_rep, sep="")
 addParagraph(rtffile, text)
 
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=4, res=150, plot.S )
 #rm(plot.S)
 addNewLine(rtffile, n=1)
 addNewLine(rtffile, n=1)
-addParagraph(rtffile, "\\b \\fs20 Intisari perhitungan emisi\\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs20 Bảng tóm tắt tính toán lượng phát thải\\b0 \\fs20")
 addNewLine(rtffile, n=1)
 fs_table[2,3]<-printArea(as.numeric(as.character(fs_table[2,3])))
 fs_table[3,3]<-printRate(as.numeric(as.character(fs_table[3,3])))
@@ -929,7 +929,7 @@ fs_table[7,3]<-printRate(as.numeric(as.character(fs_table[7,3])))
 addTable(rtffile, fs_table)
 addNewLine(rtffile, n=1)
 
-addParagraph(rtffile, "\\b \\fs20 Intisari perhitungan emisi per unit perencanaan\\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs20 Bảng tóm tắt tính toán lượng phát thải trên mỗi đơn vị quy hoạch\\b0 \\fs20")
 addNewLine(rtffile, n=1)
 data_zone_pub[2]<-printArea(data_zone_pub[2])
 addTable(rtffile, data_zone_pub)
@@ -942,16 +942,16 @@ zone_carbon_pub[5]<-printRate(zone_carbon_pub[5])
 zone_carbon_pub[6]<-printRate(zone_carbon_pub[6])
 addTable(rtffile, zone_carbon_pub)
 addNewLine(rtffile, n=1)
-addParagraph(rtffile, "\\b \\fs20 Intisari perhitungan emisi per wilayah administrasi\\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs20 Tính toán lượng phát thải trên mỗi khu vực hành chính\\b0 \\fs20")
 addNewLine(rtffile, n=1)
 admin_carbon_pub[2]<-printArea(admin_carbon_pub[2])
 admin_carbon_pub[4]<-printRate(admin_carbon_pub[4])
 admin_carbon_pub[5]<-printRate(admin_carbon_pub[5])
 admin_carbon_pub[6]<-printRate(admin_carbon_pub[6])
 addTable(rtffile, admin_carbon_pub)
-addParagraph(rtffile, "Keterangan : ")
-addParagraph(rtffile, "Emisi bersih = Total emisi - Total sequestrasi ")
-addParagraph(rtffile, "Laju emisi = (Total Emisi - Total Sequestrasi) / (luas * periode waktu) ")
+addParagraph(rtffile, "Ghi chú : ")
+addParagraph(rtffile, "Lượng phát thải ròng = Tổng lượng phát thải – Tổng lượng cô lập")
+addParagraph(rtffile, "Tỷ lệ phát thải = (Tổng lượng phát thải – Tổng lượng cô lập) / (diện tích * khoảng thời gian) ")
 addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3, res=150, emissionRate )
 addNewLine(rtffile, n=1)
@@ -972,7 +972,7 @@ addNewLine(rtffile, n=1)
 addNewLine(rtffile, n=1)
 addNewLine(rtffile, n=1)
 addNewLine(rtffile, n=1)
-addParagraph(rtffile, "\\b \\fs20 Sumber Emisi Terbesar\\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs20 Nguồn phát thải lớn nhất\\b0 \\fs20")
 addNewLine(rtffile, n=1)
 tb_em_total_10[3]<-printRate(tb_em_total_10[3])
 addTable(rtffile, tb_em_total_10)
@@ -980,7 +980,7 @@ addNewLine(rtffile, n=1)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3, res=150, largestEmission )
 addNewLine(rtffile, n=1)
 # rm(largestEmission)
-addParagraph(rtffile, "\\b \\fs20 Sumber sequestrasi terbesar\\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs20 Nguồn cô lập lớn nhất\\b0 \\fs20")
 addNewLine(rtffile, n=1)
 tb_seq_total_10[3]<-printRate(tb_seq_total_10[3])
 addTable(rtffile, tb_seq_total_10)
@@ -994,7 +994,7 @@ addNewLine(rtffile, n=1)
 addParagraph(rtffile, chapter3)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Pada bagian ini disajikan hasil analisis dinamika cadangan karbon untuk masing-masing kelas unit perencanaan yang dianalisis. Beberapa bentuk analisis yang dilakukan antara lain: tingkat emisi, tingkat sequestrasi, laju emisi dan tipe perubahan penggunaan lahan yang paling banyak menyebabkan emisi/sequestrasi.")
+addParagraph(rtffile, "Phần này trình bày kết quả phân tích sự biến động trữ lượng carbon cho từng đơn vị lập kế hoạch được phân tích. Một số phân tích đo được: mức phát thải, mức cô lập, tỷ lệ phát thải và nguồn phát thải / cô lập lớn nhất từ loại sử dụng đất.")
 addNewLine(rtffile)
 
 #z.emission.name<-as.vector(NULL)
@@ -1005,7 +1005,7 @@ for(i in 1:length(zone_lookup$ID)){
     zona<-paste("\\b", "\\fs20", i, "\\b0","\\fs20")
     zona_nm<-paste("\\b", "\\fs20", data_zone$Z_NAME[i], "\\b0","\\fs20")
     zona_ab<-paste("\\b", "\\fs20", data_zone$Z_CODE[i], "\\b0","\\fs20")
-    addParagraph(rtffile, "\\b \\fs20 Sumber Emisi terbesar pada \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
+    addParagraph(rtffile, "\\b \\fs20 Nguồn phát thải lớn nhất từ \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
     addNewLine(rtffile, n=1)
     
     tb_em_zon<-tb_em_zonal[which(tb_em_zonal$ZONE == a),]
@@ -1018,7 +1018,7 @@ for(i in 1:length(zone_lookup$ID)){
     #largest emission
     largestE.Z<-ggplot(data=tb_em_zon, aes(x=reorder(LU_CODE, -em), y=(em))) + geom_bar(stat="identity", fill="blue") +
       geom_text(data=tb_em_zon, aes(x=LU_CODE, y=em, label=round(em, 1)),size=3, vjust=0.1) +
-      ggtitle(paste("Sumber Emisi Terbesar Pada",i, "-", data_zone$Z_CODE[i] )) + guides(fill=FALSE) + ylab("CO2-eq") +
+      ggtitle(paste("Nguồn phát thải lớn nhất từ ", i, "-", data_zone$Z_CODE[i] )) + guides(fill=FALSE) + ylab("CO2-eq") +
       theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
       theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
             panel.grid.major=element_blank(), panel.grid.minor=element_blank())
@@ -1032,7 +1032,7 @@ for(i in 1:length(zone_lookup$ID)){
     addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3, res=150, largestE.Z )
     addNewLine(rtffile, n=1)
     
-    addParagraph(rtffile, "\\b \\fs20 Sumber Sequestrasi Terbesar Pada \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
+    addParagraph(rtffile, "\\b \\fs20 Nguồn cô lập lớn nhất từ \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
     addNewLine(rtffile, n=1)
     
     tb_seq_zon<-tb_seq_zonal[which(tb_seq_zonal$ZONE == a),]
@@ -1045,7 +1045,7 @@ for(i in 1:length(zone_lookup$ID)){
     #largest sequestration
     largestS.Z<-ggplot(data=tb_seq_zon, aes(x=reorder(LU_CODE, -seq), y=(seq))) + geom_bar(stat="identity", fill="green") +
       geom_text(data=tb_seq_zon, aes(x=LU_CODE, y=seq, label=round(seq, 1)),size=3, vjust=0.1) +
-      ggtitle(paste("Sumber Sequestrasi Terbesar Pada",i, "-", data_zone$Z_CODE[i] )) + guides(fill=FALSE) + ylab("CO2-eq") +
+      ggtitle(paste("Nguồn cô lập lớn nhất từ ",i, "-", data_zone$Z_CODE[i] )) + guides(fill=FALSE) + ylab("CO2-eq") +
       theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
       theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
             panel.grid.major=element_blank(), panel.grid.minor=element_blank())

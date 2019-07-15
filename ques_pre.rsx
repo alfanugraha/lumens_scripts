@@ -483,8 +483,8 @@ alphabeta.plot<-function(alphabeta_table, t1, t2, area.analysis){
 
 if(analysis.option==2 | analysis.option==0){
   # alpha-beta at landscape level
-  landscape.alphabeta<-alphabeta(data_merge, lookup_lc, T1, T2, paste("Keseluruhan", location))
-  landscape.alphabeta.plot<-alphabeta.plot(landscape.alphabeta, T1, T2,paste("Keseluruhan", location))
+  landscape.alphabeta<-alphabeta(data_merge, lookup_lc, T1, T2, paste("Tất cả các địa ", location))
+  landscape.alphabeta.plot<-alphabeta.plot(landscape.alphabeta, T1, T2,paste("Tất cả các địa ", location))
   
   # alpha-beta at planning unit level
   alpha_beta_database<-data.frame()
@@ -588,20 +588,20 @@ plot.LU2<-gplot(landuse2, maxpixels=100000) + geom_raster(aes(fill=as.factor(val
 
 setwd(result_dir)
 # write report Pre-QUES change
-title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
-title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Land Use Change Analysis ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
-sub_title<-"\\cf2\\b\\fs32 ANALISA PERUBAHAN PENGGUNAAN LAHAN\\cf1\\b0\\fs20"
+title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1BÁO CÁO \\par\\b0\\fs20\\ql\\cf1"
+title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Phân tích thay đổi sử dụng đất cho ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
+sub_title<-"\\cf2\\b\\fs32 PHÂN TÍCH THAY ĐỔI SỬ DỤNG ĐẤT\\cf1\\b0\\fs20"
 #date<-paste("Date : ", date, sep="")
-time_start<-paste("Proses dimulai : ", time_start, sep="")
-time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+time_start<-paste("Bắt đầu : ", time_start, sep="")
+time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 I_O_period_1_rep<-paste("\\b","\\fs20", T1)
 I_O_period_2_rep<-paste("\\b","\\fs20", T2)
-chapter1<-"\\cf2\\b\\fs28 DATA YANG DIGUNAKAN \\cf1\\b0\\fs20"
-chapter2<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT BENTANG LAHAN \\cf1\\b0\\fs20"
-chapter3<-"\\cf2\\b\\fs28 HASIL ANALISA PADA TINGKAT UNIT PERENCANAAN \\cf1\\b0\\fs20"
-rtffile <- RTF("Pre-QUES_change_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+chapter1<-"\\cf2\\b\\fs28 DANH SÁCH DỮ LIỆU ĐẦU VÀO \\cf1\\b0\\fs20"
+chapter2<-"\\cf2\\b\\fs28 KẾT QUẢ PHÂN TÍCH Ở CẤP ĐỘ CẢNH QUAN  \\cf1\\b0\\fs20"
+chapter3<-"\\cf2\\b\\fs28 KẾT QUẢ PHÂN TÍCH Ở CẤP ĐỘ ĐƠN VỊ QUY HOẠCH \\cf1\\b0\\fs20"
+rtffile <- RTF("Pre-QUES_change_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 file.copy(paste0(LUMENS_path, "/ques_cover.png"), result_dir, recursive = FALSE)
 file.copy(paste0(LUMENS_path, "/ques_line.png"), result_dir, recursive = FALSE)
 img_location<-paste0(result_dir, "/ques_cover.png")
@@ -611,7 +611,7 @@ line_location<-paste0(result_dir, "/ques_line.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul Perubahan Penggunaan Lahan\n\nAnalisis Perubahan Penggunaan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+text_submodule <- paste("Tiểu mô-đun sự thay đổi sự dụng đất\n\nPhân tích quỹ đạo sử dụng đất tại địa\n", location, ", ", "giai đoạn ", T1, "-", T2, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -659,61 +659,62 @@ addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
 #addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addNewLine(rtffile)
-addParagraph(rtffile, "Analisa perubahan tutupan lahan dilakukan untuk mengetahui kecenderungan perubahan tutupan lahan di suatu daerah pada satu kurun waktu. Analisa ini dilakukan dengan menggunakan data peta tutupan lahan pada dua periode waktu yang berbeda. Selain itu, dengan memasukkan data unit perencanaan kedalam proses analisa, dapat diketahui kecenderungan perubahan tutupan lahan pada masing-masing kelas unit perencanaan yang ada. Informasi yang dihasilkan melalui analisa ini dapat digunakan dalam proses perencanaan untuk berbagai hal. Diantaranya adalah: menentukan prioritas pembangunan, mengetahui faktor pemicu perubahan penggunaan lahan, merencanakan skenario pembangunan di masa yang akan datang, dan lain sebagainya.")
+addParagraph(rtffile, "Phân tích thay đổi sử dụng đất được thực hiện để xác định khả năng thay đổi sử dụng / che phủ đất ở một khu vực tại một thời điểm. Phân tích này được thực hiện bằng việc sử dụng bản đồ sử dụng/che phủ đất tại 2 thời điểm khác nhau. Ngoài ra, kết quả phân tích thay đổi sử dụng đất được trình bày trong từng dữ liệu của đơn vị quy hoạch hiện có. Tất cả thông tin được tạo ra từ báo cáo này có thể được sử dụng trong nhiều quy trình lập kế hoạch khác nhau, ví dụ, xác định ưu tiên phát triển, các yếu tố thúc đẩy thay đổi sử dụng đất, kịch bản phát triển trong tương lai, v.v..")
 addNewLine(rtffile)
 addParagraph(rtffile, chapter1)
 #addPng(rtffile, line_location, width = 8.267, height = 0.1)
 addNewLine(rtffile)
-addParagraph(rtffile, "Data yang digunakan dalam analisa ini adalah data peta penggunaan lahan dan data peta unit perencanaan daerah. Data pendukung yang digunakan adalah peta acuan tipe penggunaan lahan dan data acuan kelas unit perencanaan")
+addParagraph(rtffile, "Các dữ liệu được sử dụng trong phân tích này là bản đồ sử dụng/che phủ đất, bản đồ đơn vị quy hoạch, bản đồ tham chiếu các loại sử dụng/che phủ đất, và lớp tham chiếu của đơn vị lập kế hoạch như dữ liệu được hỗ trợ")
 addNewLine(rtffile)
 #addTable(rtffile,test3,font.size=8)
 #addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Peta Tutupan Lahan ", location, " tahun ", T1," \\b0 \\fs20", sep=""))
+addParagraph(rtffile, paste("\\b \\fs20 Bản đồ sử dụng/che phủ đất địa phương ", location, " năm  ", T1," \\b0 \\fs20", sep=""))
 addNewLine(rtffile, n=1)
 tryCatch({
   addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3, res=150, plot.LU1 )
   addNewLine(rtffile, n=1)
 },error=function(e){cat("Nice try pal! ~ please re-check your input data :",conditionMessage(e), "\n"); addParagraph(rtffile, "no data");addNewLine(rtffile)})
-addParagraph(rtffile, paste("\\b \\fs20 Peta Tutupan Lahan ", location, " tahun ", T2," \\b0 \\fs20", sep=""))
+addParagraph(rtffile, paste("\\b \\fs20 Bản đồ sử dụng/che phủ đất địa phương ", location, " năm  ", T2," \\b0 \\fs20", sep=""))
 addNewLine(rtffile, n=1)
 tryCatch({
   addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3, res=150, plot.LU2 )
   addNewLine(rtffile, n=1)
 },error=function(e){cat("Nice try pal! ~ please re-check your input data :",conditionMessage(e), "\n"); addParagraph(rtffile, "no data");addNewLine(rtffile)})
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Peta Unit Perencanaan "," \\b0 \\fs20", sep=""))                                                                                                                                                                                                                                                                                                                                                                                                                           
+addParagraph(rtffile, paste("\\b \\fs20 Bản đồ đơn vị quy hoạch "," \\b0 \\fs20", sep="")) 
+
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150, plot.Z)
 addNewLine(rtffile)
 addParagraph(rtffile, chapter2)
 #addPng(rtffile, line_location, width = 18.267, height = 0.3)
 addNewLine(rtffile)
-addParagraph(rtffile, "Pada bagian ini disajikan hasil analisa perubahan penggunaan lahan untuk keseluruhan bentang lahan yang dianalisa. Beberapa bentuk analisa yang dilakukan antara lain: perbandingan luasan tutupan lahan pada periode analisa dan tipe perubahan lahan dominan pada bentang lahan yang dianalisa")
+addParagraph(rtffile, "Phần này trình bày kết quả phân tích thay đổi sử dụng đất cho toàn bộ cảnh quan. Một số phân tích đo lường: So sánh diện tích sử dung/che phủ đất giữa hai khoảng thời gian khác nhau và loại thay đổi sử dụng/che phủ đất chủ yếu đã được phân tích")
 addNewLine(rtffile)
-addParagraph(rtffile, "Tabel Intisari Perubahan Tutupan Lahan menyajikan perbandingan luasan tipe-tipe tutupan lahan di sebuah bentnag lahan pada kurun waktu tertentu. Kolom Overall Change menunjukkan perubahan luasan dalam satuan hektar. Notasi negatif pada kolom ini menunjukkan pengurangan luasan sebaliknya notasi positif menunjukkan penambahan luasan. Kolom Rate menunjukkan laju perubahan luasan tutupan lahan dalam satuan %/tahun. Kolom ini dihitung dengan mengurangi luasan pada t2-t1 kemudian dibagi dengan perkalian luasan pada t1 dan kurun waktu analisa")
+addParagraph(rtffile, "Bảng tóm tắt thay đổi sử dụng đất trình bày sự so sánh diện tích của các loại sử dụng đất ở cấp độ cảnh quan trong một khoảng thời gian nhất định. Cột Thay đổi tổng thể cho thấy sự thay đổi diện tích theo đơn vị ha. Ký hiệu âm trên cột này chỉ sự giảm diện tích và ký hiệu dương chỉ sự tăng thêm diện tích. Cột tỷ lệ cho thấy tỷ lệ diện tích che phủ đất tính theo% / năm")
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Intisari Perubahan Tutupan Lahan di", location, "\\b \\fs20", sep=" "))
+addParagraph(rtffile, paste("\\b \\fs20 Bảng tóm tắt thay đổi sử dụng/che phủ đất tại địa phương ", location, "\\b \\fs20", sep=" "))
 #width<-as.vector(c(0.44,2,0.69,0.69,0.69,0.69))
 addTable(rtffile,Ov_chg,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=150,  ov.change.plot.2)
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Luasan Perubahan Tutupan Lahan (ha) di", location, "\\b \\fs20", sep=" "))
+addParagraph(rtffile, paste("\\b \\fs20 Diện tích thay đổi sử dụng/che phủ đất (ha) ở địa phương ", location, "\\b \\fs20", sep=" "))
 #width<-as.vector(c(0.44,2,0.69,0.69))
 addTable(rtffile,Ov_chg.ha,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=150,  ov.change.plot.3)
 
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Rerata Luasan Perubahan Tutupan Lahan (%/tahun) di", location, "\\b \\fs20", sep=" "))
+addParagraph(rtffile, paste("\\b \\fs20 Thay đổi sử dụng/che phủ đất trung bình (%/năm) ở địa phương ", location, "\\b \\fs20", sep=" "))
 #width<-as.vector(c(0.44,2,1,1))
 addTable(rtffile,Ov_chg.rate,font.size=8)
 addNewLine(rtffile)
 addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=150,  ov.change.plot.4)
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\b \\fs20 Sepuluh Perubahan Lahan Dominan di",location, "\\b0 \\fs20", sep=" "))
+addParagraph(rtffile, paste("\\b \\fs20 Mười thay đổi sử dụng đất chiếm ưu thế tại địa phương ",location, "\\b0 \\fs20", sep=" "))
 addNewLine(rtffile, n=1)
-colnames(chg_only_top)[3]<-"Luas(ha)"
+colnames(chg_only_top)[3]<-"Diện tích(ha)"
 addTable(rtffile, chg_only_top)
 addNewLine(rtffile, n=1)
 addPlot(rtffile,plot.fun=print, width=6.7,height=3,res=150,Largest.chg)
@@ -724,7 +725,7 @@ if(analysis.option==1 | analysis.option==0){
   addParagraph(rtffile, chapter3)
   #addPng(rtffile, line_location, width = 8.267, height = 0.1)
   addNewLine(rtffile)
-  addParagraph(rtffile, "Pada bagian ini disajikan hasil analisa perubahan penggunaan lahan untuk masing-masing kelas unit perencanaan yang dianalisa. Beberapa bentuk analisa yang dilakukan antara lain: perbandingan luasan tutupan lahan pada periode analisa dan tipe perubahan lahan dominan pada unit perencanaan yang dianalisa")
+  addParagraph(rtffile, "Phần này trình bày kết quả phân tích thay đổi sử dụng đất cho từng đơn vị quy hoạch được phân tích. Một số phân tích đo lường: So sánh diện tích sử dung/che phủ đất giữa hai khoảng thời gian khác nhau và loại thay đổi sử dụng đất chủ yếu đã được phân tích trong mỗi dơn vị quy hoạch")
   addNewLine(rtffile)
   for(i in 1:length(lookup_z$ID)){
     tryCatch({
@@ -733,19 +734,19 @@ if(analysis.option==1 | analysis.option==0){
       zona<-paste("\\b", "\\fs20", i, "\\b0","\\fs20")
       zona_nm<-paste("\\b", "\\fs20", zonal.db$ZONE[i], "\\b0","\\fs20")
       zona_ab<-paste("\\b", "\\fs20", zonal.db$Z_CODE[i], "\\b0","\\fs20")
-      addParagraph(rtffile, "\\b \\fs20 Sepuluh Tipe Perubahan Tutupan Lahan Dominan di Unit Perencanaan \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
+      addParagraph(rtffile, "\\b \\fs20 Mười thay đổi sử dụng đất chủ yếu trong đơn vị lập quy hoạch \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm, "\\b \\fs20 (\\b0 \\fs20", zona_ab, "\\b \\fs20)\\b0 \\fs20" )
       addNewLine(rtffile, n=1)
       lg_chg_zon<-lg_chg_zonal[which(lg_chg_zonal$ZONE == i),]
       lg_chg_zon$ZONE<-NULL
       lg_chg_plot<-lg_chg_zon
-      colnames(lg_chg_zon)[3]<-"Luas (ha)"
+      colnames(lg_chg_zon)[3]<-"Diện tích(ha)"
       addTable(rtffile, lg_chg_zon)
       addNewLine(rtffile, n=1)
       # largest source of change in planning unit level
       Largest.chg.z<- ggplot(data=lg_chg_plot, aes(x=reorder(CHG_CODE, -COUNT),y=COUNT, fill=CHG_CODE))+geom_bar(stat='identity',position='dodge')+
         geom_text(data=lg_chg_plot, aes(x=CHG_CODE, y=COUNT, label=round(COUNT, 1)),size=3, vjust=0.1) +
-        ggtitle(paste("10 Perubahan Dominan pada Unit Perencanaan",i, "-", zonal.db$Z_CODE[i] )) + guides(fill=FALSE) +
-        labs(x = 'Jenis perubahan penutupan lahan', y='Luas area (Ha)') + guides(fill=FALSE)+
+        ggtitle(paste("10 thay đổi đất chính chiếm ưu thế trong đơn vị quy hoạch ",i, "-", zonal.db$Z_CODE[i] )) + guides(fill=FALSE) +
+        labs(x = 'Jenis perubahan penutupan lahan', y='Diện tích đất (ha)') + guides(fill=FALSE)+
         theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
         theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
               panel.grid.major=element_blank(), panel.grid.minor=element_blank())
@@ -757,7 +758,7 @@ if(analysis.option==1 | analysis.option==0){
 }
 # alpha-beta analysis report
 if(analysis.option==2 | analysis.option==0){
-  addParagraph(rtffile, paste("\\b \\fs20 Grafik IO: dinamika perubahan lahan di\\b0 \\fs20 ", area_name_rep, I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Biểu đồ IO: Sự biến động thay đổi độ che phủ đất tại địa phương giai đoạn\\b0 \\fs20 ", area_name_rep, I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20", I_O_period_2_rep, sep=" "))
   addPlot(rtffile,plot.fun=print, width=6.7,height=5,res=150,  landscape.alphabeta.plot)
   addNewLine(rtffile)
   addNewLine(rtffile)
@@ -770,7 +771,7 @@ if(analysis.option==2 | analysis.option==0){
         if(!checkNULL){
           zona<-paste("\\b", "\\fs20", i, "\\b0","\\fs20")
           zona_nm<-paste("\\b", "\\fs20", lookup_z$ZONE[i], "\\b0","\\fs20")
-          addParagraph(rtffile, "\\b \\fs20 Grafik IO: dinamika perubahan lahan di \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm )
+          addParagraph(rtffile, "\\b \\fs20 Biểu đồ IO: Sự biến động thay đổi sử dụng đất tại \\b0 \\fs20", zona,"\\b \\fs20 - \\b0 \\fs20", zona_nm )
           
           addNewLine(rtffile)
           eval(parse(text=( paste("addPlot(rtffile,plot.fun=print, width=6.7,height=5,res=150, alphabeta_plot_zone_",i,")", sep=''))))
@@ -1048,26 +1049,26 @@ if(analysis.option==3 | analysis.option==0){
   #graph needs to be checked, sometimes plot with melt data type isn't correctly displaying   
   plot_traj<-ggplot(data=PreQUES_traj_database.melt,aes(factor(Zone),Area,fill=factor(Trajectories)))+geom_bar(stat="identity",position="dodge")+ coord_equal() +
     theme(axis.text.x= element_text(angle=90,hjust=1))+ labs(x = 'Zona', y='Luas area (Ha)')+
-    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Jenis perubahan penutupan lahan', y='Luas area (Ha)')+coord_flip()+
+    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Loại thay đổi che phủ đất', y='Diện tích đất (Ha)')+coord_flip()+
     theme( legend.title = element_text(size=8),legend.text = element_text(size = 6))
   
   plot_traj_group<-ggplot(data=PreQUES_traj_database.overal,aes(Traj,.,fill=Traj))+geom_bar(stat="identity",position="dodge")+ coord_equal() +
     theme(axis.text.x= element_text(angle=90,hjust=1))+ labs(x = 'Zona', y='Luas area (Ha)')+
-    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Jenis perubahan tutupan lahan', y='Luas area (Ha)')+coord_flip()+
+    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Loại thay đổi che phủ đất', y='Diện tích đất (Ha)')+coord_flip()+
     theme( legend.title = element_text(size=8),legend.text = element_text(size = 6))
   
   colnames(PreQUES_traj_forest.melt)<-c("Zone", "Forest_Change","variable", "Area"); #rename column names
   #graph needs to be checked, sometimes plot with melt data type isn't correctly displaying   
   plot_def<-ggplot(data=PreQUES_traj_forest.melt,aes(factor(Zone),Area,fill=factor(Forest_Change)))+geom_bar(stat="identity",position="dodge")+ coord_equal() +
     theme(axis.text.x= element_text(angle=90,hjust=1))+ labs(x = 'Zona', y='Luas area (Ha)')+
-    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Jenis perubahan tutupan hutan', y='Luas area (Ha)')+coord_flip()+
+    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Loại thay đổi che phủ đất', y='Diện tích đất (Ha)')+coord_flip()+
     theme( legend.title = element_text(size=8),legend.text = element_text(size = 6))
   
   colnames(PreQUES_traj_drive.melt)<-c("Trajectories", "Forest_Change","variable", "Area"); #rename column names
   #graph needs to be checked, sometimes plot with melt data type isn't correctly displaying   
   plot_drive<-ggplot(data=PreQUES_traj_drive.melt,aes(factor(Trajectories),Area,fill=factor(Forest_Change)))+geom_bar(stat="identity",position="dodge")+ coord_equal() +
     theme(axis.text.x= element_text(angle=90,hjust=1))+ labs(x = 'Zona', y='Luas area (Ha)')+
-    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Jenis perubahan tutupan hutan', y='Luas area (Ha)')+coord_flip()+
+    theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Loại thay đổi che phủ đất', y='Diện tích đất (Ha)')+coord_flip()+
     theme( legend.title = element_text(size=8),legend.text = element_text(size = 6))
   
   colnames(PreQUES_traj_database.overal)<-c("Trajectories", "Area (Ha)")
@@ -1091,7 +1092,7 @@ if(analysis.option==3 | analysis.option==0){
   #command<-paste("resave(", newTraj, ",", newTrajsum, ",",newTrajz,",",newTrajmap, ",", sep="")
   
   #write report
-  rtffile <- RTF("Pre-QUES_Trajectory_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+  rtffile <- RTF("Pre-QUES_Trajectory_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
   file.copy(paste0(LUMENS_path, "/ques_cover.png"), result_dir, recursive = FALSE)
   file.copy(paste0(LUMENS_path, "/ques_line.png"), result_dir, recursive = FALSE)
   img_location<-paste0(result_dir, "/ques_cover.png")
@@ -1101,7 +1102,7 @@ if(analysis.option==3 | analysis.option==0){
   cover <- image_read(img_location)
   # to display, only requires to execute the variable name, e.g.: "> cover"
   # adding text at the desired location
-  text_submodule <- paste("Sub-Modul Perubahan Penggunaan Lahan\n\nAnalisis Alur Penggunaan Lahan\n", location, ", ", "Periode ", T1, "-", T2, sep="")
+  text_submodule <- paste("Tiểu mô-đun sự thay đổi sự dụng đất\n\nPhân tích quỹ đạo sử dụng đất tại địa\n", location, ", ", "giai đoạn ", T1, "-", T2, sep="")
   cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
   cover_image <- image_write(cover_image)
   # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -1110,11 +1111,11 @@ if(analysis.option==3 | analysis.option==0){
   addPng(rtffile, cover_image, width = 8.267, height = 11.692)
   addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
   
-  title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
-  title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Land Use Trajectory Analysis ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
-  sub_title<-"\\cf2\\b\\fs32 ANALISA ALUR PENGGUNAAN LAHAN\\cf1\\b0\\fs20"
+  title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1BÁO CÁO \\par\\b0\\fs20\\ql\\cf1"
+  title2<-paste("\\pard\\qr\\b\\fs40\\cf1 PreQUES-Phân tích quỹ đạo sử dụng đất cho ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
+  sub_title<-"\\cf2\\b\\fs32 PHÂN TÍCH QUỸ DẠO SỬ DỤNG ĐẤT\\cf1\\b0\\fs20"
   #date<-paste("Date : ", date, sep="")
-  time_end<-paste("Proses selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+  time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
   line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
   area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
   I_O_period_1_rep<-paste("\\b","\\fs20", T1)
@@ -1156,29 +1157,29 @@ if(analysis.option==3 | analysis.option==0){
   
   #addParagraph(rtffile, date)
   addNewLine(rtffile)
-  addParagraph(rtffile, "Analisa perubahan tutupan lahan dilakukan untuk mengetahui kecenderungan perubahan tutupan lahan di suatu daerah pada satu kurun waktu. Analisa ini dilakukan dengan menggunakan data peta tutupan lahan pada dua periode waktu yang berbeda. Selain itu, dengan memasukkan data unit perencanaan kedalam proses analisa, dapat diketahui kecenderungan perubahan tutupan lahan pada masing-masing kelas unit perencanaan yang ada. Informasi yang dihasilkan melalui analisa ini dapat digunakan dalam proses perencanaan untuk berbagai hal. Diantaranya adalah: menentukan prioritas pembangunan, mengetahui faktor pemicu perubahan penggunaan lahan, merencanakan skenario pembangunan di masa yang akan datang, dan lain sebagainya.")
+  addParagraph(rtffile, "Phân tích thay đổi sử dụng đất được thực hiện để xác định khả năng thay đổi sử dụng / che phủ đất ở một khu vực tại một thời điểm. Phân tích này được thực hiện bằng việc sử dụng bản đồ sử dụng/che phủ đất tại 2 thời điểm khác nhau. Ngoài ra, kết quả phân tích thay đổi sử dụng đất được trình bày trong từng dữ liệu của đơn vị quy hoạch hiện có. Tất cả thông tin được tạo ra từ báo cáo này có thể được sử dụng trong nhiều quy trình lập kế hoạch khác nhau, ví dụ, xác định ưu tiên phát triển, các yếu tố thúc đẩy thay đổi sử dụng đất, kịch bản phát triển trong tương lai, v.v..")
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs24 ALUR PERUBAHAN PENGGUNAAN LAHAN\\b0 \\fs24", sep=""))
+  addParagraph(rtffile, paste("\\b \\fs24 QUỸ ĐẠO THAY ĐỔI SỬ DỤNG ĐẤT\\b0 \\fs24", sep=""))
   addNewLine(rtffile)
   addPng(rtffile, line_location)
   addNewLine(rtffile)
-  addParagraph(rtffile, "Alur perubahan penggunaan lahan merupakan ringkasan keseluruhan tipe rangkaian perubahan penggunaan lahan yang mungkin terjadi di sebuah daerah. Kategori besar dari alur perubahan lahan dibagi menjadi dua jenis yaitu Loss of tree cover dan recovery of tree cover")
+  addParagraph(rtffile, "Quỹ đạo thay đổi sử dụng đất là bản tóm tắt về tổng thể các loại thay đổi sử dụng đất có thể xảy ra trong một khu vực. Những thay đổi quỹ đạo lớn được chia thành hai loại là mất độ che phủ cây xanh và phục hồi độ che phủ cây xanh")
   addNewLine(rtffile)
   
   addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot.LU1)
-  addParagraph(rtffile, paste("\\b \\fs20 Gambar 1. Peta Kelompok Perubahan Penutupan Lahan\\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Hình 1. Bản đồ nhóm quỹ đạo thay đổi sử dụng đất địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addNewLine(rtffile)
   addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_traj_group)
-  addParagraph(rtffile, paste("\\b \\fs20 Gambar 2. Grafik Kelompok Perubahan Penutupan Lahan\\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Hình 2. Biểu đồ nhóm quỹ đạo thay đổi sử dụng đất địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addNewLine(rtffile)
   addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_traj)
-  addParagraph(rtffile, paste("\\b \\fs20 Gambar 3. Grafik Kelompok Perubahan Penutupan Lahan\\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20",  I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 berdasarkan Unit Perencanaan \\b0 \\fs20", sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Hình 3. Biểu đồ nhóm quỹ đạo thay đổi sử dụng đất địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",  I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 dựa trên đơn vị quy hoạch \\b0 \\fs20", sep=" "))
   addNewLine(rtffile)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 1. Luas Area Kelompok Perubahan Penutupan Lahan \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20",  I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 1. Diện tích nhóm quỹ đạo thay đổi sử dụng đất địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",  I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addTable(rtffile,PreQUES_traj_database.overal,font.size=8)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 2. Luas Area Kelompok Perubahan Lahan di \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20", I_O_period_2_rep,"\\b \\fs20 Tiap Unit Perencanaan \\b0 \\fs20", sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 2. Diện tích nhóm quỹ đạo thay đổi sử dụng đất địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep, "\\b \\fs20 - \\b0 \\fs20", I_O_period_2_rep,"\\b \\fs20 cho mỗi đơn vị quy hoạch \\b0 \\fs20", sep=" "))
   addTable(rtffile,PreQUES_traj_database.zone,font.size=8)
   
   #plot: total changes per trajectory
@@ -1188,34 +1189,34 @@ if(analysis.option==3 | analysis.option==0){
     PreQUES_traj_database.zone.melt_pertrajek<- melt(data = PreQUES_traj_database.zone, id.vars=c('Trajectories'), measure.vars=c(colnames(PreQUES_traj_database.zone)[s]))
     plot_per_trajek<-ggplot(data=PreQUES_traj_database.zone.melt_pertrajek,aes(factor(Trajectories),value,fill=factor(Trajectories)))+geom_bar(stat="identity",position="dodge")+ coord_equal() +
       theme(axis.text.x= element_text(angle=90,hjust=1))+ labs(x = 'Zona', y='Luas area (Ha)')+
-      theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Jenis perubahan tutupan lahan', y='Luas area (Ha)')+coord_flip()+
+      theme(axis.text.x= element_text(angle=360, hjust=1))+ labs(x = 'Loại thay đổi che phủ đất', y='Diện tích đất (Ha)')+coord_flip()+
       theme( legend.title = element_text(size=8),legend.text = element_text(size = 6))
     #eval(parse(text=( paste("plot.per.trajek_",s,'_',colnames(PreQUES_traj_database.zone)[s],'<-plot_per_trajek', sep=''))));#save plots
     addNewLine(rtffile)
     addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_per_trajek)
     addNewLine(rtffile)
-    addParagraph(rtffile, paste("\\b \\fs20 Sub Gambar ",c,". Grafik Perubahan Lahan di Berbagai Zona Perencanaan untuk jenis ",colnames(PreQUES_traj_database.zone)[s], "\\b0 \\fs20 di ", location, "\\b \\fs20 Tahun \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+    addParagraph(rtffile, paste("\\b \\fs20 Hình phu ", c,". Biểu đồ thay đổi sử dụng đất trong đơn vị quy hoạch ",colnames(PreQUES_traj_database.zone)[s], "\\b0 \\fs20 tai địa ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
     addNewLine(rtffile)
   }
   
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs24 PERUBAHAN TUTUPAN HUTAN\\b0 \\fs24", sep=""))
+  addParagraph(rtffile, paste("\\b \\fs24 THAY ĐỔI ĐỘ CHE PHỦ RỪNG\\b0 \\fs24", sep=""))
   addNewLine(rtffile)
   addPng(rtffile, line_location)
   addNewLine(rtffile)
-  addParagraph(rtffile, "Salah satu bentuk alur perubahan penggunaan lahan yang paling banyak mendapatkan perhatian adalah alur perubahan hutan alam menjadi tipe tutupan lahan lainnya (deforestasi) dan perubahan hutan alam primer menjadi hutan alam sekunder (degradasi). Bagian ini memperlihatkan hasil analisa LUMENS terhadap perubahan tutupan hutan di sebuah daerah")
+  addParagraph(rtffile, "Quỹ đạo thay đổi sử dụng đất quan trọng nhất là sự thay đổi của rừng tự nhiên sang loại sử dụng / che phủ đất khác (phá rừng) và thay đổi rừng nguyên sinh thành rừng bị khai thác (suy thoái). Phần này cho thấy kết quả về thay đổi độ che phủ rừng ở một khu vực nhất định")
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Gambar 4. Grafik Perubahan Tutupan Hutan di Berbagai Zona Perencanaan\\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 berdasarkan Unit Perencanaan \\b0 \\fs20", sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Hình 4. Biểu đồ thay đổi độ che phủ rừng dựa trên đơn vị quy hoạch địa\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 dựa trên đơn vị quy hoạch \\b0 \\fs20", sep=" "))
   addNewLine(rtffile)
   addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_def)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 3. Luas deforestasi \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 3. Diện tích phá rừng địa \\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addTable(rtffile,PreQUES_traj_forest.overal,font.size=8)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 4. Luas deforestasi berdasarkan zonasi \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 4. Diện tích phá rừng dựa trên đơn vị quy hoạch địa \\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20",I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addTable(rtffile,PreQUES_traj_forest.zone,font.size=8)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 5. Laju deforestasi berdasarkan zonasi \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 5. Tỷ lệ phá rừng dựa trên đơn vị quy hoạch địa \\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addTable(rtffile,forest.change.rate,font.size=8)
   addNewLine(rtffile)
   
@@ -1233,16 +1234,16 @@ if(analysis.option==3 | analysis.option==0){
     addNewLine(rtffile)
     addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_per_trajek)
     addNewLine(rtffile)
-    addParagraph(rtffile, paste("\\b \\fs20 Sub Gambar ",c,". Grafik Perubahan Hutan di Berbagai Zona Perencanaan untuk ",colnames(PreQUES_traj_forest.zone)[s], "\b  di \\b0 \\fs20", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+    addParagraph(rtffile, paste("\\b \\fs20 Hình phụ ", c,". Biểu đồ thay đổi rừng trong các đơn vị quy hoạch cho phá rừng tại địa ",colnames(PreQUES_traj_forest.zone)[s], "\b  di \\b0 \\fs20", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
     addNewLine(rtffile)
   }
   
   addPlot(rtffile,plot.fun=print, width=6.7,height=4,res=300, plot_drive)
   addNewLine(rtffile)
-  addParagraph(rtffile, paste("\\b \\fs20 Gambar 5. Grafik Perubahan Tutupan Hutan dan alur perubahan yang menyebabkannya\\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 berdasarkan Unit Perencanaan \\b0 \\fs20", sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Hình 5. Biểu đồ thay đổi độ che phủ rừng và nguyên nhân cho quỹ đạo của sự thay đổi\\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep,"\\b \\fs20 dựa trên đơn vị quy hoạch  \\b0 \\fs20", sep=" "))
   addNewLine(rtffile)
   
-  addParagraph(rtffile, paste("\\b \\fs20 Tabel 5. Luas deforestasi berdasarkan alur perubahan \\b0 \\fs20 ", location, "\\b \\fs20 Tahun \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
+  addParagraph(rtffile, paste("\\b \\fs20 Bảng 5. Diện tích phá rừng dựa trên sự thay đổi của quỹ đạo địa \\b0 \\fs20 ", location, "\\b \\fs20 giai đoạn \\b0 \\fs20", I_O_period_1_rep,"-", I_O_period_2_rep, sep=" "))
   addTable(rtffile,PreQUES_traj_drive.zone,font.size=8)
   addNewLine(rtffile)
   done(rtffile)

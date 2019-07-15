@@ -420,14 +420,14 @@ plot.admin<-gplot(ref, maxpixels=100000) + geom_raster(aes(fill=as.factor(value)
          legend.key.height = unit(0.35, "cm"),
          legend.key.width = unit(0.35, "cm"))
 # write report   
-title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
-title2<-paste("\\pard\\qr\\b\\fs40\\cf1 Create LUMENS Project ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
-sub_title<-"\\cf2\\b\\fs32 Ringkasan Deskripsi Projek\\cf1\\b0\\fs20"
-chapter1<-"\\cf2\\b\\fs28 Deskripsi Projek \\cf1\\b0\\fs20"
-chapter2<-"\\cf2\\b\\fs28 Cakupan Geografis Projek \\cf1\\b0\\fs20"
-chapter3<-"\\cf2\\b\\fs28 Data-data Acuan Dalam Projek \\cf1\\b0\\fs20"
-time_start<-paste("Proses LUMENS dimulai : ", time_start, sep="")
-time_end<-paste("Proses LUMENS selesai : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1BÁO CÁO \\par\\b0\\fs20\\ql\\cf1"
+title2<-paste("\\pard\\qr\\b\\fs40\\cf1 Tạo dự án LUMENS cho ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
+sub_title<-"\\cf2\\b\\fs32 Tóm tắt mô tả dự án\\cf1\\b0\\fs20"
+chapter1<-"\\cf2\\b\\fs28 Mô tả dự án \\cf1\\b0\\fs20"
+chapter2<-"\\cf2\\b\\fs28 Khu vực địa lý của dự án \\cf1\\b0\\fs20"
+chapter3<-"\\cf2\\b\\fs28 Dữ liệu tham chiếu \\cf1\\b0\\fs20"
+time_start<-paste("Chạy chương trình LUMENS bắt đầu lúc : ", time_start, sep="")
+time_end<-paste("Chạy chương trình LUMENS kết thúc lúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 line<-paste("-------------------------------------------------------------------------------------------------------------------------------------------------------")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 rtffile <- RTF(paste0(project, "_", gsub(" ", "_", location), ".doc"), font.size=9)
@@ -469,12 +469,12 @@ addParagraph(rtffile, line)
 addParagraph(rtffile, time_end)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, paste("Selamat datang di LUMENS!!. Anda telah berhasil menyusun konfigurasi data-data awal yang akan digunakan dalam perencanaan penggunaan lahan yang mempertimbangkan berbagai fungsi lingkungan. LUMENS project file terdiri dari dua file utama dengan akhiran .lpj dan lpd. Project file yang telah anda buat bernama ", project, ".lpj."))
+addParagraph(rtffile, paste("Chào mừng đến với LUMENS!!. Bạn đã cấu hình thành công dữ liệu ban đầu sẽ được sử dụng trong quy hoạch sử dụng đất để xem xét các chức năng môi trường khác nhau. Tệp dự án LUMENS vừa được tạo là  ", project, ".lpj."))
 addNewLine(rtffile)
 addParagraph(rtffile, chapter1)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Deskripsi projek menyimpan informasi umum yang anda masukkan mengenai projek ini")
+addParagraph(rtffile, "Dự án lưu trữ thông tin chung về dữ liệu đầu vào")
 addNewLine(rtffile)
 width<-as.vector(c(1.34,3.1))
 addTable(rtffile,proj_descr,font.size=8,col.widths=width)
@@ -482,7 +482,7 @@ addNewLine(rtffile)
 addParagraph(rtffile, chapter2)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Cakupan geografis projek menyimpan informasi mengenai cakupan area yang akan digunakan di dalam project, batas-batas koordinat, sistem projeksi serta resolusi spasial yang akan digunakan dalam projek")
+addParagraph(rtffile, "Lưu trữ thông tin địa lý cho dự án LUMENS, hệ thống tọa độ, hệ thống chiếu và độ phân giải không gian")
 addNewLine(rtffile)
 addTable(rtffile,cov_desc,font.size=8,col.widths=width)
 addNewLine(rtffile)
@@ -490,9 +490,9 @@ addPageBreak(rtffile)
 addParagraph(rtffile, chapter3)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Berikut ini adalah beberapa data yang akan dijadikan data acuan dalam projek ini")
+addParagraph(rtffile, "Các dữ liệu sau đây được sử dụng làm dữ liệu tham chiếu dự án")
 addNewLine(rtffile)
-addParagraph(rtffile, paste("\\cf4\\b \\fs20 Peta batas administrasi\\b \\fs20\\cf1", sep=" "))
+addParagraph(rtffile, paste("\\cf4\\b \\fs20 Bản đồ ranh giới hành chính\\b \\fs20\\cf1", sep=" "))
 addPlot(rtffile,plot.fun=print, width=6,height=4.5,res=150,  plot.admin)
 addNewLine(rtffile)
 done(rtffile)

@@ -313,20 +313,20 @@ names(myColors.RPB) <- unique(area_rec1$Rec_phase1b)
 ColScale.RPB<-scale_fill_manual(values = myColors.RPB)
 Rec.phs.bar<-ggplot(data=area_rec1, aes(x=Rec_phase1b, y=COUNT, fill=Rec_phase1b)) + geom_bar(stat="identity") +coord_flip() + ColScale.RPB +
   geom_text(data=area_rec1, aes(x=Rec_phase1b, y=COUNT, label=round(COUNT, 1)),size=3, vjust=0.1) +
-  ggtitle(paste("Unit Perencanaan Fase 1" )) + guides(fill=FALSE) + ylab("Luas (ha)") +
+  ggtitle(paste("Đơn vị quy hoạch pha 1" )) + guides(fill=FALSE) + ylab("Luas (ha)") +
   theme(plot.title = element_text(lineheight= 5, face="bold")) + scale_y_continuous() +
   theme(axis.title.x=element_blank(), axis.text.x = element_text(size=8),
         panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 
 #write report
-title<-"\\b\\fs40 LUMENS-PUR Project Report\\b0\\fs20"
-sub_title<-"\\b\\fs32 REKONSILIASI UNIT PERENCANAAN MENGGUNAKAN DATA ACUAN\\b0\\fs20"
-date<-paste("Date : ", date(), sep="")
-time_start<-paste("Processing started : ", time_start, sep="")
-time_end<-paste("Processing ended : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
+title<-"\\b\\fs40 LUMENS-PUR Báo cáo dự án\\b0\\fs20"
+sub_title<-"\\b\\fs32 THỐNG NHẤT ĐƠN VỊ QUY HOẠCH SỬ DỤNG DỮ LIỆU THAM CHIẾU\\b0\\fs20"
+date<-paste("Ngày : ", date(), sep="")
+time_start<-paste("Bắt đầu : ", time_start, sep="")
+time_end<-paste("Kết thúc : ", eval(parse(text=(paste("Sys.time ()")))), sep="")
 area_name_rep<-paste("\\b", "\\fs20", location, "\\b0","\\fs20")
 line<-paste("------------------------------------------------------------------------------------------------------------------------------------------------")
-rtffile <- RTF("PUR-Build_report.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
+rtffile <- RTF("PUR-Build_bao_cao.doc", font.size=11, width = 8.267, height = 11.692, omi = c(0,0,0,0))
 # INPUT
 file.copy(paste0(LUMENS_path, "/pur_cover.png"), wd_user, recursive = FALSE)
 img_location<-paste0(wd_user, "/pur_cover.png")
@@ -334,7 +334,7 @@ img_location<-paste0(wd_user, "/pur_cover.png")
 cover <- image_read(img_location)
 # to display, only requires to execute the variable name, e.g.: "> cover"
 # adding text at the desired location
-text_submodule <- paste("Sub-Modul PUR\n\nRekonsiliasi Unit Perencanaan\n", location, sep="")
+text_submodule <- paste("Sub-Modul PUR\n\nThống nhất đơn vị quy hoạch \n", location, sep="")
 cover_image <- image_annotate(cover, text_submodule, size = 23, gravity = "southwest", color = "white", location = "+46+220", font = "Arial")
 cover_image <- image_write(cover_image)
 # 'gravity' defines the 'baseline' anchor of annotation. "southwest" defines the text shoul be anchored on bottom left of the image
@@ -352,32 +352,32 @@ addParagraph(rtffile, time_start)
 addParagraph(rtffile, time_end)
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Rekonsiliasi unit perencanaan adalah proses untuk menyelesaikan tumpang-tindih ijin dengan merujuk pada peta acuan/referensi fungsi. Rekonsiliasi dilakukan dengan menganalisa kesesuaian fungsi antara data-data ijin dengan data referensi. Data ijin yang dimaksud datapat berupa data konsesi pengelolaan hutan, ijin perkebunan, ijin tambang dan lain sebagainya, Sedangkan data referensi yang digunakan dapat berupa data rencana tata ruang atau penunjukan kawasan. ")
+addParagraph(rtffile, "Thống nhất đơn vị quy hoạch là một quá trình giải quyết những sự cho phép chồng chéo dựa trên bản đồ tham chiếu. Việc thống nhất được thực hiện bằng cách phân tích tính tương thích của các chức năng giữa dữ liệu cho phép và dữ liệu tham chiếu. Dữ liệu cho phép được sử dụng có thể là nhượng bộ quản lý rừng, cấp phép trồng rừng, cấp phép khai thác, v.v.. Dữ liệu tham chiếu được sử dụng có thể là sơ đồ không gian hoặc khu vực chỉ định")
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b \\fs32 DATA YANG DIGUNAKAN \\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs32 DANH SÁCH DỮ LIỆU ĐẦU VÀO \\b0 \\fs20")
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b Data acuan \\b0")
+addParagraph(rtffile, "\\b Dữ liệu tham chiếu \\b0")
 addNewLine(rtffile)
-addParagraph(rtffile, "Data acuan adalah data yang digunakan sebagai referensi dalam melakukan pengecekan kesesuaian fungsi peta-peta unit perencanaan dengan fungsi referensi. Peta ini dapat berupa peta acuan penunjukan kawasan atau peta tata ruang. Pada prinsipnya, data referensi adalah data dengan tingkat kepastian hukum tertinggi atau data yang apling dipercaya sebagai acuan fungsi unit perencanaan di sebuah daerah")
+addParagraph(rtffile, "Dữ liệu tham chiếu được sử dụng làm tài liệu tham khảo để kiểm tra tính tương thích của các chức năng giữa bản đồ đơn vị quy hoạch và tham chiếu. Dữ liệu tham chiếu được sử dụng có thể là quy hoạch không gian hoặc khu vực chỉ định. Về nguyên tắc, dữ liệu tham chiếu là dữ liệu có mức độ chính xác về mặt pháp lý cao nhất hoặc dữ liệu đáng tin cậy nhất được sử dụng làm đơn vị quy hoạch tham chiếu trong một khu vực nhất định")
 addNewLine(rtffile)
 
 #datalist2[1]<-NULL
 addTable(rtffile, datalist2)
 #datalist[1]<-NULL
 addNewLine(rtffile)
-addParagraph(rtffile, "\\b Data ijin \\b0")
+addParagraph(rtffile, "\\b Dữ liệu cho phép \\b0")
 addNewLine(rtffile)
-addParagraph(rtffile, "Data ijin adalah data-data unit perencanaan yang akan digunakan untuk menunjukkan konfigurasi perencanaan penggunaan lahan di sebuah daerah. Data-data dalam bentuk peta ini menggambarkan arahan pengelolaan atau perubahan penggunaan lahan pada sebuah bagian bentang lahan")
+addParagraph(rtffile, "Dữ liệu cho phép là dữ liệu đơn vị quy hoạch được sử dụng để xác định cấu hình quy hoạch sử dụng đất ở một khu vực nhất định. Dữ liệu không gian mô tả những thay đổi của việc sử dụng đất trên một phần nhất định của cảnh quan")
 addNewLine(rtffile)
 addTable(rtffile, pu_list)
 addNewLine(rtffile)
 addPlot.RTF(rtffile, plot.fun=print, width=6.7, height=3.73, res=150, plot(PUR_stack))
 addNewLine(rtffile)
 
-addParagraph(rtffile, "\\b \\fs32 HASIL REKONSILIASI \\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs32 KẾT QUẢ THỐNG NHẤT \\b0 \\fs20")
 addParagraph(rtffile, line)
-addParagraph(rtffile, "Pada bagian ini ditunjukkan hasil proses rekonsiliasi dengan menggunakan peta referensi ")
+addParagraph(rtffile, "Phần này trình bày kết quả của quá trình thống nhất bằng bản đồ tham chiếu ")
 addNewLine(rtffile)
 addNewLine(rtffile)
 addNewLine(rtffile)
@@ -388,10 +388,10 @@ addNewLine(rtffile)
 addPlot.RTF(rtffile, plot.fun=plot, width=6.7, height=3.73, res=150, Rec.phs.bar )
 addNewLine(rtffile)
 
-addParagraph(rtffile, "\\b \\fs32 DATA IJIN YANG TIDAK TERREKONSILIASI \\b0 \\fs20")
+addParagraph(rtffile, "\\b \\fs32 DỮ LIỆU CHƯA ĐƯỢC GIẢI QUYẾT \\b0 \\fs20")
 addParagraph(rtffile, line)
 addNewLine(rtffile)
-addParagraph(rtffile, "Data ijin yang tidak dapat terekonsiliasi akan tercantum pada bagian ini. Rekonsiliasi berbasis acuan fungsi, tidak dapat dilakukan jika ditemukan dua atau lebih unit perencanaan yang memiliki kesuaian fungsi dengan data acuan/referensi. Jika hal ini terjadi maka proses rekonsiliasi harus dilanjutkan melalui diskusi dengan semau pemangku kepentingan yang terkait ")
+addParagraph(rtffile, "Phần này trình bày dữ liệu chưa được giải quyết. Quá trình thống nhất dựa trên dữ liệu tham chiếu và giấy phép không được giải quyết nếu dữ liệu hoặc khu vực nhất định có nhiều hơn hai chức năng. Do đó, quá trình thống nhất phải được tiến hành thông qua đàm phán hoặc thảo luận giữa các bên liên quan")
 addNewLine(rtffile)
 addTable(rtffile, database_unresolved_out, font.size=7)
 addNewLine(rtffile)
