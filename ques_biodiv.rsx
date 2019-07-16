@@ -1459,10 +1459,10 @@ for(p in 1:length(fa_class)){
     I_O_period_1_rep<-paste0("\\b","\\fs22 ", as.character(pd_1), "\\b0","\\fs22")
     I_O_period_2_rep<-paste0("\\b","\\fs22 ", as.character(pd_2), "\\b0","\\fs22")
     chapter1<-"\\b\\fs28 1. DỮ LIỆU ĐẦU VÀO\\b0\\fs28"
-    chapter2<-"\\b\\fs28 2. PERUBAHAN AREA FOKAL\\b0\\fs28"
-    chapter3<-"\\b\\fs28 3. DISTRIBUSI NILAI IKTT\\b0\\fs28"
-    chapter4<-"\\b\\fs28 4. \\i DEGREE OF INTEGRATION OF FOCAL AREA\\i0  (\\i DIFA\\i0 )\\b0\\fs28"
-    chapter5<-"\\b\\fs28 5. DINAMIKA IKTT DAN AREA FOKAL\\b0\\fs28"
+    chapter2<-"\\b\\fs28 2. SỰ BIẾN ĐỘNG KHU VỰC TRỌNG ĐIỂM\\b0\\fs28"
+    chapter3<-"\\b\\fs28 3. SỰ PHÂN BỔ TECI\\b0\\fs28"
+    chapter4<-"\\b\\fs28 4. \\i MỨC ĐỘ TÍCH HỢP CỦA KHU VỰC TRỌNG ĐIỂM\\i0  (\\i DIFA\\i0 )\\b0\\fs28"
+    chapter5<-"\\b\\fs28 5. TECI VÀ ĐỘNG NĂNG KHU VỰC TRỌNG ĐIỂM\\b0\\fs28"
     chapter6<-"\\b\\fs28 6. DESKRIPSI IKTT UNIT PERENCANAAN\\b0\\fs28"
     
     # ==== Report 0. Cover=====
@@ -1547,7 +1547,7 @@ for(p in 1:length(fa_class)){
     text <- paste0("\\qj Phần này tóm tắt các thay đổi che phủ đất liên quan đến sự biến động khu vực trọng điểm . Mức độ thay đổi được ghi lại, cũng như thống kê cảnh quan cơ bản, được trình bày một cách định lượng dưới dạng bảng. Không gian của các thay đổi khu vực trọng điểm xảy ra cũng được hiển thị dưới dạng bản đồ ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Dalam analisis \\i QUES-B \\i0 secara keseluruhan terdapat ", length(fa_class), " kelas tutupan lahan yang didefinisikan sebagai area fokal. Laporan ini membahas secara spesifik satu kelas tutupan area fokal, yaitu ", names(fa_class[p]), ". Pada kondisi utuh yang didefinisikan berdasarkan peta tutupan lahan tahun ", pristine_pd, ", ", names(fa_class[p]), " mencakup area seluas ", prettyNum(round(totarea*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar. Pada tahun ", pd_1, " dan ", pd_2, " luas area fokal yang tersisa adalah ", prettyNum(round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]/totarea*100, digits = 2),"%) dan ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar (", round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]/totarea*100, digits = 2), "%), secara berurutan. Dengan kata lain, selama ", pd_2-pd_1, " tahun terdapat perubahan luas area fokal sebesar ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " hektar atau sebanding dengan ", round(abs(100*(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)/(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)), digits = 2), "% dari luas pada tahun ", pd_1, ".")
+    text <- paste0("\\qj Có ", length(fa_class), " lớp trọng điểm được phân tích trong mô-đun. Báo cáo này bao gồm một trong số đó, đó là ", names(fa_class[p]), ". Theo điều kiện hành động, như được thể hiện trong bản đồ che phủ đất năm ", pristine_pd, ", ", names(fa_class[p]), " bao phủ ", prettyNum(round(totarea*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " Ha. Ở ", pd_1, " và ở ", pd_2, " khu vực trọng điểm còn lại lần lượt là ", prettyNum(round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " Ha (", round(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]/totarea*100, digits = 2),"%) và ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " Ha (", round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]/totarea*100, digits = 2), "%). Nói cách khác, trong khoảng thời gian ", pd_2-pd_1, " năm, thay đổi khu vực trọng điểm xảy ra là ", prettyNum(round(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res, digits = 2), big.mark = ".", decimal.mark = ","), " Ha, tương đương với ", round(abs(100*(area_lc2[area_lc2$CLASS_LC2 == names(fa_class[p]), "count"]*Spat_res - area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)/(area_lc1[area_lc1$CLASS_LC1 == names(fa_class[p]), "count"]*Spat_res)), digits = 2), "% của khu vực trọng điểm còn lại trong năm ", pd_1, ".")
     addParagraph(rtffile, text)
     if(maxValue(chk_loss)>0) {
       addNewLine(rtffile)
@@ -1558,7 +1558,7 @@ for(p in 1:length(fa_class)){
       text <- paste("\\b Các lớp che phủ đất liên quan đến mất khu vực trọng điểm \\b0",area_name_rep, " \\b giai đoạn \\b0", I_O_period_1_rep, "\\b -\\b0", I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(foc.area.loss.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
-      addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Diện tích tính theo ha; tỷ lệ tính theo % (%)\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
     } else {
       print("Tidak ditemukan kelenyapan area fokal")
@@ -1575,7 +1575,7 @@ for(p in 1:length(fa_class)){
       text <- paste("\\b Tutupan Lahan Sebelum Kemunculan Area Fokal\\b0 ",area_name_rep,  " \\b giai đoạn \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(foc.area.gain.att), font.size = 9, col.justify = c("L", "R", "R"), header.col.justify = c("L", "R", "R"))
-      addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
+      addParagraph(rtffile, "\\b\\fs20 *Diện tích tính theo ha; tỷ lệ tính theo % (%)\\b0\\fs20 ")
       addNewLine(rtffile, n=1)
     } else {
       print("Tidak ditemukan kemunculan area fokal")
@@ -1602,38 +1602,38 @@ for(p in 1:length(fa_class)){
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=1)
     # Table pu focal area change
-    text <- paste("\\b Perubahan Area Fokal pada Unit Perencanaan\\b0 ",area_name_rep, " \\b periode \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
+    text <- paste("\\b Sự biến động khu vực trọng điểm tại các đơn vi quy hoạch\\b0 ",area_name_rep, " \\b giai đoạn  \\b0", I_O_period_1_rep,'\\b -\\b0',I_O_period_2_rep,  sep=" ")
     addParagraph(rtffile, text)
     names(zstat.foc.area) <- c("ZONE", "Kawasan", "Luas Perubahan", "Luas Wilayah", "Proporsi Luas") # INDO ver
     addTable(rtffile, id.col_rm(zstat.foc.area), font.size = 9, col.justify = c('L', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R'))
-    addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar; Proporsi dalam persen(%)\\b0\\fs20 ")
+    addParagraph(rtffile, "\\b\\fs20 *Diện tích tính theo ha; tỷ lệ tính theo % (%)\\b0\\fs20 ")
     addNewLine(rtffile, n=1)
-    text <- paste("\\b Statistik Lanskap Dasar\\b0 ")
+    text <- paste("\\b Thống kê cảnh quan cơ bản\\b0 ")
     addParagraph(rtffile, text)
     addTable(rtffile, foc.area.stats, row.names=TRUE, font.size = 9, col.justify = c('L', 'R', 'R'), header.col.justify = c('L', 'R', 'R'))
-    addParagraph(rtffile, "\\b\\fs20 *Besaran area dalam hektar;Panjang dalam meter; Proporsi dalam persen(%)\\b0\\fs20 ")
+    addParagraph(rtffile, "\\b\\fs20 *Diện tích tính theo ha; bề dài tính theo mét (m); Tỷ lệ tính theo % (%)\\b0\\fs20 ")
     addNewLine(rtffile, n = 0.5)
     addNewLine(rtffile, n = 1)
     #==== Report III.  Map of dissimilarities from focal area====
     addHeader(rtffile, chapter3, TOC.level = 1)
     addNewLine(rtffile, n=1.5)
-    text <- paste0("\\qj Derajat perbedaan antara sebidang area fokal dengan kelas tutupan non fokal yang bersebelahan mempengaruhi sifat tepi, terutama permeabilitasnya (kemampuan tepi untuk meloloskan perpindahan individu spesies, materi, dll. dari area fokal). Bidang area fokal dengan ukuran, bentuk, dan konfigurasi yang sama dikatakan lebih rentan terhadap ancaman terhadap keanekaragaman hayatinya apabila tepinya bersebelahan langsung degan kelas-kelas pentutupan lahan yang derajat perbedaannya tinggi dibandingkan dengan kelas yang derajat perbedaannya rendah. Hal ini dibangun berdasarkan anggapan bahwa tepi area fokal yang berbatasan secara langsung dengan kelas yang memiliki kontras tinggi akan memiliki permeabilitas yang lebih rendah dan berlaku pula sebaliknya.")
+    text <- paste0("\\qj Mức độ tương phản giữa lớp che phủ đất và lớp lân cận của nó ảnh hưởng đến tính chất cạnh, đặc biệt là tính thấm của nó, tức là khả năng cạnh tạo điều kiện cho sự di chuyển của sinh vật, vật chất, năng lượng, v.v. giữa hai lớp lân cận khác nhau. Một bản vá của lớp trọng điểm và đa dạng sinh học có  được coi là dễ bị xáo trộn hơn nếu lớp đất xung quanh của nó có độ tương phản cao và, trong trường hợp đó, được coi là bị phân mảnh. Điều này là do tính không thấm nước của cạnh bao quanh bản vá lớp trọng điểm.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Modul \\i QUES-B \\i0 menghitung estimasi permeabilitas suatu petak area fokal berdasarkan indeks kontras tepi total (IKTT atau \\i Total Edge Contrast Index\\i0, disingkat \\i TECI\\i0) pada tingkat sub-lanskap. Sub-lanskap ditentukan berdasarkan 'jendela bergerak' (\\i moving window\\i0) yang mengikhtisarkan indeks kontras tepi total pada area sub-lanskap yang berpusat pada setiap piksel area fokal. Pendekatan matematis yang diterapkan dalam peringkasan nilai indeks kontras tepi total dalam 'jendela bergerak' adalah perata-rataan. Adapun dimensi 'jendela bergerak', yakni ukuran dan bentuknya, diatur oleh pengguna pada jendela input. ")
+    text <- paste0("\\qj Mô-đun \\i QUES-B \\i0 ước tính tính thấm của mảnh vá lớp trọng điểm dựa trên giá trị tổng chỉ số tương phản cạnh (\\i TECI\\i0) được tính toán ở cấp độ tiểu cảnh quan. Phạm vi tiểu cảnh quan được xác định bởi hình dạng và kích thước của khung cửa sổ di chuyển, được đặt bởi người dùng trong tham số hóa mô-đun . Cửa sổ trích xuất và tóm tắt TECI khi nó quét trên toàn bộ cảnh quan. Công thức được áp dụng trong cửa sổ chuyển động là trung bình số học. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Rentang nilai IKTT adalah nol hingga 100. Nilai IKTT nol menunjukkan kenihilan kontras antara suatu sel area fokal dengan petak-petak di sekitarnya, sedangkan nilai seratus terasosiasi dengan kondisi di mana area fokal sangat berbeda dengan piksel yang mengelilinginya (contoh: area fokal berupa kelas tutupan hutan primer yang 'dikepung' oleh area terbangun). Perlu diperhatikan bahwa tinggi rendahnya tingkat perbedaan suatu kelas tutupan lahan terhadap tutupan area fokal ditentukan berdasarkan nilai bobot kontras tepi yang dijadikan sebagai salah satu masukan modul ini (lihat bagian I). ")
+    text <- paste0("\\qj TECI nằm trong khoảng từ 0 đến 100. TECI nhỏ biểu thị độ tương phản thấp hơn giữa một lớp trọng điểm và các lớp lân cận , trong khi TECI cao biểu thị độ tương phản cao hơn . Loại thứ hai thường được tìm thấy trong trường hợp một bản vá lớp trọng điểm cụ thể được bao quanh bởi (các) lớp che phủ đất tương phản, ví dụ: một khu rừng nguyên sinh được bao quanh bởi rừng cọ dầu . Độ lớn của độ tương phản tuân theo trọng lượng tương phản đầu vào của người dùng (phần 1). ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Proses penghitungan IKTT dilakukan secara spasial sehingga dihasilkan peta yang menunjukkan distribusi nilai pada daerah studi. Satu titik waktu diwakili oleh satu peta IKTT seperti yang ditampilkan di bawah ini. Perubahan nilai IKTT yang umum teramati dalam analisis antarwaktu antara lain: penambahan, pengurangan, kemunculan, dan kelenyapan. Perubahan-perubahan tersebut merupakan dampak dari perubahan tutupan lahan suatu daerah pada suatu titik waktu ke titik waktu setelahnya terutama yang mempengaruhi luas dan distribusi area fokal dan/atau area di sekitarnya. Pemahaman lebih mendalam mengenai perubahan-perubahan IKTT serta interpretasinya terdapat pada bagian 5. ")
+    text <- paste0("\\qj Quá trình tính toán của TECI được tiến hành theo không gian và do đó, dẫn đến các bản đồ hiển thị giá trị TECI ở mỗi lớp trọng điểm trong khung cảnh . Mỗi bước có bản đồ TECI như được hiển thị trong các ví dụ bên dưới . Có thể dễ dàng quan sát các thay đổi trong các giá trị của TECI, chẳng hạn như tăng, giảm, xuất hiện và biến mất trong các bản đồ như vậy . Các sự biến động liên quan chặt chẽ đến thay đổi che phủ đất xảy ra trong vùng lân cận của khu vực trọng điểm hiện có . Thông tin chi tiết về sự biến động của TECI và diễn giải của nó có thể được tìm thấy tại Phần 5. ")
     addParagraph(rtffile, text)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    text <- paste("\\b Peta Distribusi Nilai IKTT \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_1_rep, sep="")
+    text <- paste("\\b Bản đồ TECI của \\b0 ",area_name_rep, " \\b  năm  \\b0", I_O_period_1_rep, sep="")
     addParagraph(rtffile, text)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.mw.init )
     addNewLine(rtffile, n=1)
-    text <- paste("\\b Peta Distribusi Nilai IKTT \\b0 ",area_name_rep, " \\b  tahun \\b0", I_O_period_2_rep, sep="")
+    text <- paste("\\b Bản đồ TECI của \\b0 ",area_name_rep, " \\b  năm  \\b0", I_O_period_2_rep, sep="")
     addParagraph(rtffile, text)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=4, res=150, plot.mw.fin )
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
@@ -1641,41 +1641,41 @@ for(p in 1:length(fa_class)){
     #==== Report IV.  DIFA Chart ====
     addHeader(rtffile, chapter4, TOC.level = 1)
     addNewLine(rtffile, n=1.5)
-    text <- paste0("\\qj Informasi mengenai luas dan distribusi area fokal serta nilai IKTT suatu daerah memiliki tingkat spesifisitas dan kedetilan yang tinggi. Kenyataan bahwa terdapat banyak sekali faktor lain yang perlu diperhatikan (misalnya: legalitas, ekonomi, dan sosial) dalam proses pengelolaan dan perencanaan daerah serta keberagaman tingkat pemahaman para pemangku kepentingan terkait isu habitat dan lingkungan hidup, informasi-informasi terkait kondisi area fokal perlu dikemas secara ringkas dan padat. Untuk menjawab kebutuhan tersebut, telah dikembangkan suatu indeks numerik yang disebut sebagai \\i DIFA \\i0 (singkatan dari \\i Degree of Integration of Focal Area\\i0).")
+    # text <- paste0("\\qj Informasi mengenai luas dan distribusi area fokal serta nilai IKTT suatu daerah memiliki tingkat spesifisitas dan kedetilan yang tinggi. Kenyataan bahwa terdapat banyak sekali faktor lain yang perlu diperhatikan (misalnya: legalitas, ekonomi, dan sosial) dalam proses pengelolaan dan perencanaan daerah serta keberagaman tingkat pemahaman para pemangku kepentingan terkait isu habitat dan lingkungan hidup, informasi-informasi terkait kondisi area fokal perlu dikemas secara ringkas dan padat. Untuk menjawab kebutuhan tersebut, telah dikembangkan suatu indeks numerik yang disebut sebagai \\i DIFA \\i0 (singkatan dari \\i Degree of Integration of Focal Area\\i0).")
+    # addParagraph(rtffile, text)
+    # addNewLine(rtffile)
+    text <- paste0("\\qj Như đã đề cập trước đó,DIFA là quá trình tạo ra một chỉ số đơn chỉ ra vùng trọng điểm còn lại và cấu hình không gian của nó. Tính toán DIFA được thực hiện sau khi bản đồ TECI được tạo bằng cách tổng hợp các giá trị TECI thành một số lưới tổng hợp. Mỗi lưới sau đó được vẽ thành một đường cong giảm dần của phần trăm khu vực trọng điểm còn lại (trục y) và giá trị TECI tổng hợp (trục x). Khu vực dưới đường cong như vậy sau đó được chia cho 100 để tạo chỉ số DIFA cho một lớp trọng điểm cụ thể tại một năm cụ thể. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Penghitungan indeks \\i DIFA \\i0 dilakukan setelah peta nilai IKTT suatu daerah dihasilkan. Suatu mekanisme peringkasan nilai IKTT dan luasan area fokal diterapkan dengan bantuan unit pengagregasi berupa poligon-poligon persegi yang mencakup seluruh area studi. Luas area fokal dan rataan seluruh nilai IKTT dari area yang tercakup setiap persegi dihitung dan diasosiasikan dengan ID unik dari masing-masing unit pengagregasi tersebut. Kemudian, dilakukan penyusunan catatan teragregasi berdasarkan nilai IKTT dari masing-masing ID unit dari kecil ke besar. Unit-unit dengan nilai IKTT yang sama diintegrasi sehingga diperoleh luasan total area fokal yang terasosiasi dengan nilai-nilai IKTT yang ada. Angka luasan total area fokal dikonversi menjadi nilai persentase relatif terhadap luasan total area fokal pada masa ketika luasan area fokal diasumsikan utuh dan belum terpengaruhi manusia secara signifikan. Setelah itu, dibuat kurva antara nilai kumulatif persentase area fokal (sumbu y) terhadap nilai IKTT (sumbu x). Hasil pembagian luas area di bawah kurva dengan angka 100 adalah nilai \\i DIFA \\i0 daerah studi pada suatu titik waktu. ")
-    addParagraph(rtffile, text)
-    addNewLine(rtffile)
-    text <- paste0("\\qj Berbeda dengan nilai IKTT, peningkatan nilai \\i DIFA \\i0 mengindikasikan kondisi area fokal yang semakin ideal. Besarnya nilai \\i DIFA \\i0 dipengaruhi oleh beberapa faktor seperti: luas total, konfigurasi dan distribusi spasial area fokal pada titik waktu tertentu serta kontras area fokal dengan area di sekitarnya. Persentase total area fokal menentukan batas maksimal nilai \\i DIFA \\i0 pada suatu titik waktu, sedangkan nilai IKTT yang menunjukkan kontras area fokal dengan wilayah sekitarnya mempengaruhi kelerengan kurva kumulatif yang dihasilkan. Dengan demikian, dapat disimpulkan bahwa nilai \\i DIFA \\i0 yang tinggi berasosiasi dengan daerah berarea fokal luas dan terintegrasi. ")
+    text <- paste0("\\qj Giá trị DIFA được diễn giải theo một cách khác với giá trị TECI . DIFA cao hơn cho thấy vùng trọng điểm còn lại lớn hơn và kết nối tốt hơn giữa các mảnh vá lớp trọng điểm . Giá trị DIFA được xác định bởi khu vực trọng điểm còn lại, cấu hình không gian, hình dạng và phân phối các mảnh vá lớp trọng điểm, cũng như các lớp che phủ đất xung quanh khu vực trọng điểm . Trong đường cong DIFA, tỷ lệ phần trăm vùng che phủ khu vực trọng điểm còn lại được biểu thị bằng chiều cao tối đa của đường cong tích lũy . Độ dốc của đường cong biểu thị mức độ phân mảnh của các mảnh trọng điểm trong khung cảnh. ")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
     # text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. ")
     # addParagraph(rtffile, text)
     # addNewLine(rtffile)
-    # Dynamic text describing DIFA value change over time
-    # conditional analysis: increase or decrease of DIFA value
-    if(AUC.init < AUC.final){
-      textif1 <- "terjadi peningkatan"
-      textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
-    } else if(AUC.init > AUC.final){
-      textif1 <- "terjadi penurunan"
-      textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
-    } else{
-      textif1 <- "tidak terjadi perubahan"
-      textif2 <- ""
-    }
+    # # Dynamic text describing DIFA value change over time
+    # # conditional analysis: increase or decrease of DIFA value
+    # if(AUC.init < AUC.final){
+    #   textif1 <- "terjadi peningkatan"
+    #   textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
+    # } else if(AUC.init > AUC.final){
+    #   textif1 <- "terjadi penurunan"
+    #   textif2 <- paste0(" sebesar ", round(abs(AUC.init - AUC.final), digits = 2), " %")
+    # } else{
+    #   textif1 <- "tidak terjadi perubahan"
+    #   textif2 <- ""
+    # }
     # text
-    text <- paste0("\\qj Kurva nilai kumulatif persentase area fokal yang diproyeksikan terhadap nilai IKTT serta hasil penghitungan nilai \\i DIFA \\i0 ditampilkan pada bagian di bawah ini. Pada tahun ", pd_1, " nilai indeks \\i DIFA \\i0 ", location_rpt, " adalah sebesar ", AUC.init, ". Dalam periode ", pd_2-pd_1, " tahun, ", textif1, " nilai \\i DIFA\\i0 ", textif2, ".")
+    text <- paste0("\\qj Đường cong DIFA và giá trị DIFA cho mỗi năm được phân tích hiển thị bên dưới. Năm ", pd_1, " giá trị \\i DIFA \\i0 của ", location_rpt, " là ", AUC.init, ". Sau khoảng thời gian ", pd_2-pd_1, " năm, ", textif1, " giá trị \\i DIFA\\i0 ", textif2, ".")
     addParagraph(rtffile, text)
     # allowing the curve to be located in neat position on the next page
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    text <- paste("\\b Kurva \\i Degree of Integration of Focal Area (DIFA)\\b0")
+    text <- paste("\\b Mức độ tích hợp của đường cong khu vực trọng điểm (DIFA)\\b0")
     addParagraph(rtffile, text)
     addNewLine(rtffile, n=0.5)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, grid.arrange(difa.init, difa.final, ncol=2))
     addNewLine(rtffile, n=1)
-    text <- paste("\\b Nilai Indeks \\i DIFA\\b0")
+    text <- paste("\\b Giá trị \\i DIFA\\b0")
     addParagraph(rtffile, text)
     text <- paste(I_O_period_1_rep, " : ", AUC.init, "%", "          ;    " ,I_O_period_2_rep, " : ", AUC.final, "%", sep=" ")
     addParagraph(rtffile, text)
@@ -1684,21 +1684,21 @@ for(p in 1:length(fa_class)){
     #==== Report V.  Habitat Change Analysis ====
     addHeader(rtffile, chapter5, TOC.level = 1)
     addNewLine(rtffile, n=1.5)
-    text <- paste0("\\qj Perubahan indeks \\i DIFA \\i0 dipengaruhi oleh perubahan nilai IKTT dan luas area fokal yang terjadi dalam konteks yang sangat beragam. Pemahaman mengenai konteks-konteks tersebut dapat didekati melalui pengenalan status dan letak kawasan perencanaan tempat terjadinya perubahan nilai IKTT dan/atau luas area fokal. Seperti yang telah dituliskan sebelumnya, secara umum dinamika nilai IKTT dan luas area fokal dapat digolongkan menjadi peningkatan atau penurunan nilai IKTT serta kelenyapan dan kemunculan nilai IKTT sebagai dampak dari konversi tutupan lahan dari/menjadi kelas tutupan area fokal.")
+    text <- paste0("\\qj Giá trị DIFA thay đổi là do sự biến động của TECI và vùng che phủ tiêu điểm còn lại . Sự tự thay đổi TECI là do một loạt các thay đổi che phủ đất xảy ra trong cảnh quan . Một số thay đổi có thể dẫn đến tăng giá trị của TECI, trong khi những thay đổi khác làm giảm giá trị TECI. Sự chuyển đổi từ lớp trọng điểm là nguyên nhân của việc mất giá trị TECI và sự chuyển đổi vào lớp trọng điểm là nguyên nhân của việc xuất hiện giá trị TECI.")
     addParagraph(rtffile, text)
     addNewLine(rtffile)
-    text <- paste0("\\qj Di awal bagian ini ditampilkan sebuah grafik yang menunjukkan keseluruhan ID unit agregasi (lihat bagian 4) dalam koordinat kartesian berupa nilai IKTT pada titik waktu terdahulu sebagai posisi x dan IKTT pada titik waktu terkini sebagai posisi Y. Luasan lingkaran menunjukkan luas area fokal pada masing-masing unit agregasi di setiap titik waktu; setiap titik waktu diwakili oleh warna lingkaran yang berbeda. Perbedaan luas lingkaran yang berpusat pada titik yang sama mengindikasikan terjadinya perubahan luas area fokal dalam periode yang diamati. Lingkaran-lingkaran yang berada di atas garis acuan diagonal merupakan unit agregasi tempat teramatinya peningkatan nilai IKTT, sementara lingkaran yang berada di bawah garis tersebut menunjukkan fenomena sebaliknya. ID unit agregasi yang mengalami kelenyapan atau kemunculan nilai IKTT ditampilkan pada pojok atas atau kanan grafik (melampaui nilai 100), secara berurutan.")
-    addParagraph(rtffile, text)
-    addNewLine(rtffile)
-    text <- paste0("\\qj Di bawah grafik tersebut, terdapat peta yang menampilkan poligon agregasi untuk menunjukkan letak unit-unit agregasi pada daerah studi. Dengan mencocokkan nama titik dalam grafik terhadap indeks peta, pengguna dapat memetakan perkiraan lokasi terjadinya fenomena-fenomena yang mempengaruhi nilai \\i DIFA \\i0 suatu daerah. Informasi lebih lengkap mengenai bentuk perubahan tutupan lahan yang menyebabkan perubahan nilai IKTT dan kawasan yang terasosiasi disampaikan pada sub-bagian-sub-bagian berikutnya dalam bentuk peta dan tabel.")
+    # text <- paste0("\\qj Di awal bagian ini ditampilkan sebuah grafik yang menunjukkan keseluruhan ID unit agregasi (lihat bagian 4) dalam koordinat kartesian berupa nilai IKTT pada titik waktu terdahulu sebagai posisi x dan IKTT pada titik waktu terkini sebagai posisi Y. Luasan lingkaran menunjukkan luas area fokal pada masing-masing unit agregasi di setiap titik waktu; setiap titik waktu diwakili oleh warna lingkaran yang berbeda. Perbedaan luas lingkaran yang berpusat pada titik yang sama mengindikasikan terjadinya perubahan luas area fokal dalam periode yang diamati. Lingkaran-lingkaran yang berada di atas garis acuan diagonal merupakan unit agregasi tempat teramatinya peningkatan nilai IKTT, sementara lingkaran yang berada di bawah garis tersebut menunjukkan fenomena sebaliknya. ID unit agregasi yang mengalami kelenyapan atau kemunculan nilai IKTT ditampilkan pada pojok atas atau kanan grafik (melampaui nilai 100), secara berurutan.")
+    # addParagraph(rtffile, text)
+    # addNewLine(rtffile)
+    text <- paste0("\\qj Biểu đồ bong bóng dưới đây tóm tắt sự biến động của TECI và khu vực trọng điểm quan sát được trong mỗi lưới tổng hợp, như thể hiện trong bản đồ sau . Độ lớn của thay đổi khu vực trọng điểm được mô tả là kích thước của bong bóng với các màu khác nhau trong khi tọa độ cartes cho thấy sự biến động TECI được thực hiện theo từng lưới tổng hợp . Mỗi bong bóng được dán nhãn ID lưới tương ứng. Vị trí của mỗi ID lưới có thể được nhìn thấy trong bản đồ đơn vị tổng hợp.")
     addParagraph(rtffile, text)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
     # summary plot
-    text <- paste("\\b Grafik Dinamika Nilai IKTT dan Area Fokal \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
+    text <- paste("\\b TECI và động năng khu vực trọng điểm \\b0 ",area_name_rep, "  \\b giai đoạn \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
     addParagraph(rtffile, text)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=5, res=150, teci_fa_dyn.plot)
     addPageBreak(rtffile, width = 8.267, height = 11.692, omi = c(1,1,1,1))
-    text <- paste("\\b Peta Unit Agregasi \\b0",  sep="")
+    text <- paste("\\b Bản đồ lưới tổng hợp \\b0",  sep="")
     addParagraph(rtffile, text)
     addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=5, res=150, ag_map)
     addNewLine(rtffile, n=1)
@@ -1707,11 +1707,11 @@ for(p in 1:length(fa_class)){
       plot.HD
       luchg.db.degrad
       subch_num <- subch_num + 1
-      text <- paste("\\b\\fs24 ", subch_num, ". Peningkatan Nilai IKTT \\b0\\fs24 ", gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
+      text <- paste("\\b\\fs24 ", subch_num, ". TECI tăng trong \\b0\\fs24 ", gsub("22", "24", area_name_rep), "  \\b\\fs24 giai đoạn \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
       addParagraph(rtffile, text)
       addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HD)
       addNewLine(rtffile, n=1)
-      text <- paste("\\b 10 Tipologi Peningkatan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
+      text <- paste("\\b 10 thay đổi che phủ đất liên quan đên sự tăng giá trị TECI tại mỗi dơn vị quy hoạch\\b0 ", sep="")
       addParagraph(rtffile, text)
       addTable(rtffile, id.col_rm(luchg.db.degrad[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
     }, error=function(e){cat("Melewatkan analisis peningkatan nilai IKTT:",conditionMessage(e), "\n")})
@@ -1722,11 +1722,11 @@ for(p in 1:length(fa_class)){
         plot.HL
         luchg.db.loss
         subch_num <- subch_num + 1
-        text <- paste("\\b\\fs24 ", subch_num, ". Kelenyapan Nilai IKTT \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 periode \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
+        text <- paste("\\b\\fs24 ", subch_num, ". Sự biến mất của giá trị TECI \\b0\\fs24 ",gsub("22", "24", area_name_rep), "  \\b\\fs24 giai đoạn \\b0\\fs24", gsub("22", "24", I_O_period_1_rep), "\\b\\fs24 -\\b0\\fs24 ", gsub("22", "24", I_O_period_2_rep),  sep="")
         addParagraph(rtffile, text)
         addPlot.RTF(rtffile, plot.fun=print, width=6.27, height=3, res=150, plot.HL)
         addNewLine(rtffile, n=1)
-        text <- paste("\\b 10 Tipologi Kelenyapan Nilai IKTT Terluas berdasarkan Unit Perencanaan dan Perubahan Tutupan Lahan Terkait\\b0 ", sep="")
+        text <- paste("\\b 10 thay đổi che phủ đất liên quan đên sự biến mất giá trị TECI tại mỗi đơn vị quy hoạch\\b0 ", sep="")
         addParagraph(rtffile, text)
         addTable(rtffile, id.col_rm(luchg.db.loss[1:10,]), font.size = 9, col.justify = c('L', 'L', 'R'), header.col.justify = c('L', 'L', 'R'))
         # addNewLine(rtffile, n=1)
@@ -1788,27 +1788,27 @@ for(p in 1:length(fa_class)){
     #},error=function(e){cat("skipping Habitat Quality Comparison analysis:",conditionMessage(e), "\n")})
     #addNewLine(rtffile, n=1)
     #==== Report VI.  TECI Zonal Statistics ====
-    addHeader(rtffile, chapter6, TOC.level = 1)
-    addNewLine(rtffile, n=1.5)
-    text <- paste0("\\qj Analisis dinamika kondisi area fokal seringkali memerlukan tindak lanjut berupa dialog dengan pemangku kepentingan, misalnya untuk perencanaan dan implementasi suatu aksi intervensi seperti restorasi atau konservasi. Identifikasi pemangku kepentingan yang paling sesuai dengan isu pengelolaan kondisi area fokal dapat dibantu dengan ketersediaan informasi mengenai profil kawasan dari waktu ke waktu. Sehubungan dengan hal tersebut, pada bagian ini ditampilkan hasil penghitungan statistika deskriptif perubahan nilai IKTT pada masing-masing kawasan pengelolaan/unit perencanaan. Informasi disajikan dalam dua tabel: tabel pertama memuat informasi mengenai kenaikan nilai IKTT sedangkan tabel berikutnya mengenai penurunan nilai IKTT. Informasi tambahan berupa perubahan luas area fokal di setiap kawasan pengelolaan turut ditampilkan untuk membantu interpretasi dinamika riil yang terjadi.")
-    addParagraph(rtffile, text)
-    addNewLine(rtffile)
-    tryCatch({
-      text <- paste("\\b Profil Unit Perencanaan: Kenaikan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
-      addParagraph(rtffile, text)
-      addTable(rtffile, id.col_rm(zstat.habitat.degradation), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
-      addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari peningkatan nilai IKTT\\b0\\fs20 ")
-      addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
-      addNewLine(rtffile, n=1)
-      
-      text <- paste("\\b Profil Unit Perencanaan: Penurunan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
-      addParagraph(rtffile, text)
-      addTable(rtffile, id.col_rm(zstat.habitat.recovery), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
-      addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari penurunan nilai IKTT\\b0\\fs20 ")
-      addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
-      addNewLine(rtffile, n=1)
-    }, error=function(e){cat("Melewatkan analisis profil unit perencanaan:",conditionMessage(e), "\n")})
-    addNewLine(rtffile, n=1)
+    # addHeader(rtffile, chapter6, TOC.level = 1)
+    # addNewLine(rtffile, n=1.5)
+    # text <- paste0("\\qj Analisis dinamika kondisi area fokal seringkali memerlukan tindak lanjut berupa dialog dengan pemangku kepentingan, misalnya untuk perencanaan dan implementasi suatu aksi intervensi seperti restorasi atau konservasi. Identifikasi pemangku kepentingan yang paling sesuai dengan isu pengelolaan kondisi area fokal dapat dibantu dengan ketersediaan informasi mengenai profil kawasan dari waktu ke waktu. Sehubungan dengan hal tersebut, pada bagian ini ditampilkan hasil penghitungan statistika deskriptif perubahan nilai IKTT pada masing-masing kawasan pengelolaan/unit perencanaan. Informasi disajikan dalam dua tabel: tabel pertama memuat informasi mengenai kenaikan nilai IKTT sedangkan tabel berikutnya mengenai penurunan nilai IKTT. Informasi tambahan berupa perubahan luas area fokal di setiap kawasan pengelolaan turut ditampilkan untuk membantu interpretasi dinamika riil yang terjadi.")
+    # addParagraph(rtffile, text)
+    # addNewLine(rtffile)
+    # tryCatch({
+    #   text <- paste("\\b Profil Unit Perencanaan: Kenaikan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
+    #   addParagraph(rtffile, text)
+    #   addTable(rtffile, id.col_rm(zstat.habitat.degradation), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
+    #   addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari peningkatan nilai IKTT\\b0\\fs20 ")
+    #   addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
+    #   addNewLine(rtffile, n=1)
+    #   
+    #   text <- paste("\\b Profil Unit Perencanaan: Penurunan nilai IKTT \\b0 ",area_name_rep, "  \\b periode \\b0", I_O_period_1_rep, "\\b -\\b0 ", I_O_period_2_rep,  sep="")
+    #   addParagraph(rtffile, text)
+    #   addTable(rtffile, id.col_rm(zstat.habitat.recovery), font.size = 9, col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'), header.col.justify = c('L', 'R', 'R', 'R', 'R', 'R', 'R'))
+    #   addParagraph(rtffile, "\\b\\fs20 *Maks, min, rerata, dan SD merupakan deskripsi numerik dari penurunan nilai IKTT\\b0\\fs20 ")
+    #   addParagraph(rtffile, "\\b\\fs20 *Luas perubahan (area fokal) dalam hektar\\b0\\fs20 ")
+    #   addNewLine(rtffile, n=1)
+    # }, error=function(e){cat("Melewatkan analisis profil unit perencanaan:",conditionMessage(e), "\n")})
+    # addNewLine(rtffile, n=1)
     done(rtffile)
     # saving rtffile into .lpj
     eval(parse(text=paste0("rtf_", fa_class[p], "_", planning_unit, "_", pd_1, "_", pd_2, " <- rtffile")))
