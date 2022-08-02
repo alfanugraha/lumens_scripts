@@ -12,7 +12,7 @@ library(DBI)
 library(rpostgis)
 
 # unzipping the .lpj file defined in 'zip_file' at the destination_folder
-proj_zfile <- grep(pattern = ".lpj$", unzip(zip_file, list=TRUE)[,1], value=TRUE)
+proj_zfile <- grep(pattern = ".lpj$", utils::unzip(zip_file, list=TRUE)[,1], value=TRUE)
 dir_name <- substr(proj_zfile, 1, (nchar(proj_zfile)-4)) # 'dir_name' is equivalent to 'project'
 project_dir <- paste0(new_working_directory, "/", dir_name)
 if(!dir.exists(project_dir)) dir.create(project_dir)

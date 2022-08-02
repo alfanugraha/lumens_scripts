@@ -1,5 +1,5 @@
 ##DB-PostgreSQL=group
-##language=string
+#language=string
 ##project=string (enter name of the project)
 ##working_directory=folder
 ##description=string
@@ -161,7 +161,8 @@ createNewPGTbl = pathEnv
 # project as a new pg_db name
 createNewPGTbl[6] = paste("createdb ", project, sep="")
 createNewPGTbl[7] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis;"', sep="")
-createNewPGTbl[8] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis_topology;"\n', sep="")
+createNewPGTbl[8] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis_topology;"', sep="")
+createNewPGTbl[9] = paste('psql -d ', project, ' -c "CREATE EXTENSION postgis_raster;"\n', sep="")
 
 newBatchFile <- file(pgEnvBatch)
 writeLines(createNewPGTbl, newBatchFile)
@@ -290,7 +291,7 @@ writeRastFile <- function(raster_in, raster_ou_path = character(), cat = FALSE, 
   # the only difference between the continuous and discrete style is in the number of <item> under <colorrampshader>
   # writing the qml file
   if(grepl(".tif$", raster_ou_path)){
-  qml_file_conn <- file(gsub(pattern = ".tif", replacement = ".qml", x = raster_ou_path))
+    qml_file_conn <- file(gsub(pattern = ".tif", replacement = ".qml", x = raster_ou_path))
   } else qml_file_conn <- file(paste0(raster_ou_path, ".qml"))
   qml_texts <- character()
   # standardized lines
@@ -343,7 +344,7 @@ writeRastFile <- function(raster_in, raster_ou_path = character(), cat = FALSE, 
 #=Save all params into .RData objects
 save(LUMENS_path_user,
      LUMENS_path,
-     language,
+     # language,
      pgEnvBatch,
      pathEnv,
      idx_landuse,
@@ -421,11 +422,11 @@ plot.admin<-gplot(ref, maxpixels=100000) + geom_raster(aes(fill=as.factor(value)
          legend.key.height = unit(0.35, "cm"),
          legend.key.width = unit(0.35, "cm"))
 # write report   
-if(language==){
-  
-} else {
-  
-}
+# if(language==){
+#   
+# } else {
+#   
+# }
 
 title1<-"{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red146\\green208\\blue80;\\red0\\green176\\blue240;\\red140\\green175\\blue71;\\red0\\green112\\blue192;\\red79\\green98\\blue40;} \\pard\\qr\\b\\fs70\\cf2 L\\cf3U\\cf4M\\cf5E\\cf6N\\cf7S \\cf1REPORT \\par\\b0\\fs20\\ql\\cf1"
 title2<-paste("\\pard\\qr\\b\\fs40\\cf1 Create LUMENS Project ", "for ", location, ", ", province, ", ", country, "\\par\\b0\\fs20\\ql\\cf1", sep="")
