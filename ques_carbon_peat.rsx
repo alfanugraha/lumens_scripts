@@ -26,6 +26,7 @@ library(stringr)
 library(spatial.tools)
 library(rasterVis)
 library(foreign)
+library(RColorBrewer)
 
 # INPUT reading process
 peat_cell <- read.csv(peat_cell, header=FALSE, sep=",")
@@ -246,7 +247,7 @@ myColors7 <- rev(brewer.pal(11, "RdYlGn"))
 myColors  <-c(myColors5,myColors1, myColors2, myColors3, myColors4, myColors7, myColors6)
 area_zone<-lookup_z
 colnames(area_zone)[1]<-'ID'
-colnames(area_zone)[3]<-'ZONE'
+colnames(area_zone)[3]<-'Legend'
 myColors.Z <- myColors[1:length(unique(area_zone$ID))]
 ColScale.Z<-scale_fill_manual(name="Unit Perencanaan", breaks=area_zone$ID, labels=area_zone$ZONE, values=myColors.Z)
 plot.Z<-gplot(zone, maxpixels=100000) + geom_raster(aes(fill=as.factor(value))) +
@@ -305,7 +306,7 @@ pu.chg_ptable <- lapply(pu.chg_ptable, function(x) x[order(x$em_calc, decreasing
 pu.chg_ptable <- pu.chg_ptable[eval(parse(text=paste0("as.character(", as.character(chg_pdtable[order(chg_pdtable$em_calc, decreasing = TRUE), "ZONE"]), ")")))]
 
 # merge chg_pdtable with lookup_Z to obtain the planning unit names
-chg_pdtable <- merge(chg_pdtable, lookup_z[,c("ID", "Legend")], by.x = "ZONE", by.y = "ID", all.x =TRUE)
+chg_pdtable <- merge(chg_pdtable, area_zone[,c("ID", "Legend")], by.x = "ZONE", by.y = "ID", all.x =TRUE)
 chg_pdtable <- chg_pdtable[ order(chg_pdtable$em_calc, decreasing = TRUE), c("Legend", "HECT", "em_calc")]
 # adding total summary
 chg_pdtable <- rbind(chg_pdtable, data.frame(Legend = "TOTAL", HECT = sum(chg_pdtable$HECT), em_calc = sum(chg_pdtable$em_calc), stringsAsFactors = FALSE))
