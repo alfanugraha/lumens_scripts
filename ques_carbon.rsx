@@ -324,7 +324,7 @@ admin_carbon[,4:7]<-round(admin_carbon[,4:7], digits=2)
 
 #=Create final summary of emission calculation at landscape level
 fs_id<-c(1,2,3,4,5,6,7)
-fs_cat<-c("Period", "Total area", "Total Emisi (Ton CO2-eq)", "Total Sequestrasi (Ton CO2-eq)", "Emisi Bersih (Ton CO2-eq)", "Laju Emisi (Ton CO2-eq/tahun)","Laju emisi per-unit area (Ton CO2-eq/ha.tahun)")
+fs_cat<-c("Period", "Total area (ha)", "Total Emisi (Ton CO2-eq)", "Total Sequestrasi (Ton CO2-eq)", "Emisi Bersih (Ton CO2-eq)", "Laju Emisi (Ton CO2-eq/tahun)","Laju emisi per-unit area (Ton CO2-eq/ha.tahun)")
 fs_em<-sum(zone_carbon$Em_tot)
 fs_sq<-sum(zone_carbon$Sq_tot)
 fs_Nem<-fs_em-fs_sq
